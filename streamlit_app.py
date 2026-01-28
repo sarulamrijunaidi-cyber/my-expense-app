@@ -17,7 +17,9 @@ st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses
 
 # 3. SIDEBAR - DASHBOARD TOTAL (Like Page 2 of your sketch)
 # Force the Amount column to be numeric so the math works
-st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce')
+# Force the Amount column to be numeric so the math works
+st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
+
 total_spent = st.session_state.expenses_db['Amount'].sum()
 st.sidebar.metric("Total Expenses", f"RM {total_spent:.2f}")
 # Button to wipe out old "text" data
