@@ -85,23 +85,22 @@ current_budget = st.session_state.monthly_budgets.get(f"{current_user}_{current_
 new_budget = st.sidebar.number_input(f"Set Budget", min_value=0.0, value=float(current_budget))
 st.session_state.monthly_budgets[f"{current_user}_{current_month}"] = new_budget
 
-# FIX: Calculate remaining_budget BEFORE line 90 to avoid NameError
+# FIX for NameError: Calculate remaining_budget BEFORE line 90
 remaining_budget = new_budget - month_spent
 
 st.sidebar.write(f"Spent in {current_month}")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {month_spent:,.2f}</h2>", unsafe_allow_html=True)
 
 st.sidebar.write("Remaining Budget")
+# Logic for colored budget display
 display_val = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
 st.sidebar.markdown(f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>{display_val}</h2>", unsafe_allow_html=True)
 
 st.sidebar.divider()
 
-# Displays the Total for 2026
 st.sidebar.write("Total for 2026")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
 
-# Displays the Overall Total
 st.sidebar.write("Overall Total")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
 
@@ -135,13 +134,13 @@ edited_df = st.data_editor(
     }
 )
 
-# 7.1 SAVE CHANGES BUTTON
 if st.button("💾 Save Changes (Update/Delete)"):
+    # Correct saving logic for multi-user support
     other_users_data = full_db[full_db['Username'] != current_user]
     updated_full_db = pd.concat([other_users_data, edited_df], ignore_index=True)
     updated_full_db.to_csv(EXPENSE_DB, index=False)
     st.success("Database updated successfully!")
-    st.rerun() # Refresh to update sidebar totals
+    st.rerun() # Forces reload of calculations at line 60
 
 # 8. DATA ANALYTICS
 if not user_data.empty:
