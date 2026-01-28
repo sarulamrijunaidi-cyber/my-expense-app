@@ -50,22 +50,24 @@ if not st.session_state.authenticated:
                 st.success("Account created! Please login.")
     st.stop()
 
-# 4. DASHBOARD CALCULATIONS (Updated for Deletion Support)
+# 4. DASHBOARD CALCULATIONS (Fixed for 2026 Sync)
 current_user = st.session_state.username
 
-# ALWAYS reload fresh data to reflect deletions immediately
+# ALWAYS reload fresh data
 full_db = pd.read_csv(EXPENSE_DB) 
 
-# Apply user filtering and numeric conversion
+# Ensure numeric and date formats are correct
 full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
-# Clean up dates to prevent 'nan' in Archive
 full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
 user_data = full_db[full_db['Username'] == current_user].copy()
 
-# Recalculate Totals based only on remaining rows
+# Recalculate Totals
 current_month = datetime.date.today().strftime("%B %Y")
+this_year = datetime.date.today().year # Automatically gets 2026
+
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
-year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
+# THE FIX: This ensures the year matches your current data exactly
+year_total = user_data[user_data['Date'].dt.year == this_year]['Amount'].sum()
 overall_total = user_data['Amount'].sum()
 
 # 5. SIDEBAR DISPLAY
