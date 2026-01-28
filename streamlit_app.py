@@ -54,20 +54,19 @@ df_sidebar['Date'] = pd.to_datetime(df_sidebar['Date'], errors='coerce')
 latest_month_total = df_sidebar[df_sidebar['Month_Year'] == current_month_name]['Amount'].sum()
 remaining_budget = new_budget - latest_month_total
 
-# Display Metrics
-st.sidebar.metric(f"Spent in {current_month_name}", f"RM {latest_month_total:,.2f}")
+# --- NEW DISPLAY CODE (Replaces lines 57-73) ---
 
-# --- Remaining Budget (Always Red with Negative Support) ---
+# 1. Large Font for 'Spent in'
+st.sidebar.write(f"Spent in {current_month_name}")
+st.sidebar.markdown(
+    f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
+    f"RM {latest_month_total:,.2f}</h2>", 
+    unsafe_allow_html=True
+)
+
+# 2. Large Font for 'Remaining Budget' (Always Red)
 st.sidebar.write("Remaining Budget")
-
-# Check if over budget to add the negative sign correctly
-if remaining_budget < 0:
-    # Use abs() to keep the number positive and manually add the minus sign before RM
-    display_budget = f"-RM {abs(remaining_budget):,.2f}"
-else:
-    display_budget = f"RM {remaining_budget:,.2f}"
-
-# HTML to force the red color and large font
+display_budget = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
 st.sidebar.markdown(
     f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>"
     f"{display_budget}</h2>", 
@@ -75,15 +74,24 @@ st.sidebar.markdown(
 )
 
 st.sidebar.divider()
-latest_year_total = df_sidebar[df_sidebar['Date'].dt.year == 2026]['Amount'].sum()
-overall_total = df_sidebar['Amount'].sum()
-st.sidebar.metric("Total for 2026", f"RM {latest_year_total:,.2f}")
-st.sidebar.metric("Overall Total", f"RM {overall_total:,.2f}")
 
-if st.sidebar.button("🗑️ Reset All Data"):
-    st.session_state.expenses_db = pd.DataFrame(columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category'])
-    st.session_state.monthly_budgets = {}
-    st.rerun()
+# 3. Large Font for 'Total for 2026'
+# (Note: Ensure you have calculated 'latest_year_total' before this line)
+st.sidebar.write("Total for 2026")
+st.sidebar.markdown(
+    f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
+    f"RM {latest_year_total:,.2f}</h2>", 
+    unsafe_allow_html=True
+)
+
+# 4. Large Font for 'Overall Total'
+# (Note: Ensure you have calculated 'overall_total' before this line)
+st.sidebar.write("Overall Total")
+st.sidebar.markdown(
+    f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
+    f"RM {overall_total:,.2f}</h2>", 
+    unsafe_allow_html=True
+)
 
 # 4. ADD ITEM FORM
 with st.expander("➕ Add New Expense", expanded=False):
