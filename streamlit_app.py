@@ -3,84 +3,61 @@ import pandas as pd
 import datetime
 
 # 1. APP CONFIGURATION
-st.set_page_config(
-    page_title="My Personal Tracker",
-    page_icon="💰",
-    layout="wide"
-)
+st.set_page_config(page_title="My Personal Tracker", page_icon="💰", layout="wide")
 
-# 2. DATABASE & BUDGET SETUP
+# 2. DATABASE SETUP
 if 'expenses_db' not in st.session_state:
-    st.session_state.expenses_db = pd.DataFrame(
-        columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
-    )
+    st.session_state.expenses_db = pd.DataFrame(columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category'])
 
 if 'monthly_budgets' not in st.session_state:
     st.session_state.monthly_budgets = {}
 
-# Force numeric for math
+# Force numeric to fix RM 0.00 issue
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
-# --- PRE-CALCULATIONS (Fixes the NameError) ---
+# --- CALCULATIONS (Must be before Dashboard) ---
 df_calc = st.session_state.expenses_db.copy()
 df_calc['Date'] = pd.to_datetime(df_calc['Date'], errors='coerce')
 
 current_month_name = datetime.date.today().strftime("%B %Y")
 month_total = df_calc[df_calc['Month_Year'] == current_month_name]['Amount'].sum()
 year_total = df_calc[df_calc['Date'].dt.year == 2026]['Amount'].sum()
-grand_total = df_calc['Amount'].sum()
+overall_total = df_calc['Amount'].sum()
 
-# 3. MAIN DASHBOARD & PAYMENT ALERTS
-st.title("💰 My Financial Tracker")
-
-st.header("📍 Dashboard Summary")
-
-# --- PAYMENT ALERTS SECTION ---
-st.subheader("⚠️ Payment Alerts")
-due_dates = {
-    "House Rent": 1, 
-    "Car Loan": 5, 
-    "Motorcycle Loan": 5, 
-    "Personal Loan": 7, 
-    "Utilities Bill": 10
-}
-today_day = datetime.date.today().day
-alerts_found = False
-
-for category, due_day in due_dates.items():
-    if due_day >= today_day and (due_day - today_day) <= 7:
-        st.warning(f"Reminder: **{category}** is due on the {due_day}st/th!")
-        alerts_found = True
-    elif today_day > due_day:
-        st.error(f"Alert: **{category}** due date ({due_day}st/th) has passed!")
-        alerts_found = True
-
-if not alerts_found:
-    st.success("All clear! No urgent payments due.")
-
-st.divider()
-
-# --- METRIC BOXES (Now works correctly) ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(f"Spent in {current_month_name}", f"RM {month_total:,.2f}")
-with col2:
-    st.metric("Total for 2026", f"RM {year_total:,.2f}")
-with col3:
-    st.metric("Overall Total", f"RM {grand_total:,.2f}")
-
-# 4. SIDEBAR BUDGET
-st.sidebar.header("⚙️ Settings")
+# 3. SIDEBAR: BUDGET & REMINDERS (Alerts moved here)
+st.sidebar.header("⚙️ Settings & Budget")
 current_budget = st.session_state.monthly_budgets.get(current_month_name, 0.0)
 new_budget = st.sidebar.number_input(f"Set Budget for {current_month_name}", min_value=0.0, value=float(current_budget))
 st.session_state.monthly_budgets[current_month_name] = new_budget
 
 remaining_budget = new_budget - month_total
 st.sidebar.write("Remaining Budget")
-color = "#FF4B4B" # Red
-display_val = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
-st.sidebar.markdown(f"<h2 style='color: {color}; font-weight: bold;'>{display_val}</h2>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<h2 style='color: #FF4B4B; font-weight: bold;'>RM {remaining_budget:,.2f}</h2>", unsafe_allow_html=True)
 
+# --- PAYMENT ALERTS (Moved under Budget) ---
+st.sidebar.divider()
+st.sidebar.subheader("⚠️ Payment Alerts")
+due_dates = {"House Rent": 1, "Car Loan": 5, "Motorcycle Loan": 5, "Personal Loan": 7, "Utilities Bill": 10}
+today_day = datetime.date.today().day
+
+for category, due_day in due_dates.items():
+    if due_day >= today_day and (due_day - today_day) <= 7:
+        st.sidebar.warning(f"{category}: Due on {due_day}st/th")
+    elif today_day > due_day:
+        st.sidebar.error(f"{category}: Overdue ({due_day}st/th)")
+
+# 4. MAIN PAGE: DASHBOARD SUMMARY
+st.title("💰 My Financial Tracker")
+st.header("📍 Dashboard Summary")
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric(f"Spent in {current_month_name}", f"RM {month_total:,.2f}")
+with col2:
+    st.metric("Total for 2026", f"RM {year_total:,.2f}")
+with col3:
+    st.metric("Overall Total", f"RM {overall_total:,.2f}")
+
+# (Keep your existing Section 4: Add New Expense, Section 5: History, and Section 6: Analytics)
 # 4. ADD ITEM FORM
 with st.expander("➕ Add New Expense"):
     with st.form("expense_form"):
