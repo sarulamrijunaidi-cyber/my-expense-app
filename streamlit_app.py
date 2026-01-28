@@ -1,6 +1,10 @@
-import streamlit as st
-import pandas as pd
-import datetime
+# 1. APP CONFIGURATION
+st.set_page_config(
+    page_title="My Personal Tracker", # This changes the browser tab name
+    page_icon="💰",                  # This changes the icon (use an emoji or image link)
+    layout="wide"
+)
+st.title("💰 Sarul's Financial Tracker") # This changes the big title on the page
 
 # 1. APP CONFIGURATION
 st.set_page_config(page_title="Monthly's Expense App", layout="wide")
