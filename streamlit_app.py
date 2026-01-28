@@ -46,13 +46,20 @@ remaining_budget = new_budget - latest_month_total
 # Display Metrics
 st.sidebar.metric(f"Spent in {current_month_name}", f"RM {latest_month_total:,.2f}")
 
-# --- Remaining Budget (Always Red) ---
+# --- Remaining Budget (Always Red with Negative Support) ---
 st.sidebar.write("Remaining Budget")
 
-# This HTML code ensures the RM total is always Red regardless of the amount
+# Check if over budget to add the negative sign correctly
+if remaining_budget < 0:
+    # Use abs() to keep the number positive and manually add the minus sign before RM
+    display_budget = f"-RM {abs(remaining_budget):,.2f}"
+else:
+    display_budget = f"RM {remaining_budget:,.2f}"
+
+# HTML to force the red color and large font
 st.sidebar.markdown(
     f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>"
-    f"RM {remaining_budget:,.2f}</h2>", 
+    f"{display_budget}</h2>", 
     unsafe_allow_html=True
 )
 
