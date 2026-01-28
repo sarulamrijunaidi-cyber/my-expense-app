@@ -60,14 +60,15 @@ with st.expander("➕ Add New Expense", expanded=False):
         st.session_state.expenses_db = pd.concat([st.session_state.expenses_db, new_entry], ignore_index=True)
         st.rerun()
 
-# 5. EDIT & DELETE HISTORY
-st.header("📝 Expense History (Click to Edit)")
-edited_df = st.data_editor(
-    st.session_state.expenses_db,
+# 5. LATEST MONTH HISTORY (Quick View)
+st.header(f"📝 Latest History ({current_month_name})")
+# Filter table to show only the current month
+latest_view = st.session_state.expenses_db[st.session_state.expenses_db['Month_Year'] == current_month_name]
+st.data_editor(
+    latest_view,
     column_config={"Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")},
-    use_container_width=True, num_rows="dynamic"
+    use_container_width=True, key="latest_editor"
 )
-st.session_state.expenses_db = edited_df
 
 if not st.session_state.expenses_db.empty and st.button("❌ Delete Last Entry"):
     st.session_state.expenses_db = st.session_state.expenses_db.drop(st.session_state.expenses_db.index[-1])
@@ -87,16 +88,45 @@ if not st.session_state.expenses_db.empty:
     with c2:
         st.subheader("Monthly Trend")
         summary = st.session_state.expenses_db.copy()
-        # Create sorting date to put January 2026 first
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
         monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index()
         monthly_grouped = monthly_grouped.sort_values('Sort_Date', ascending=False)
         st.bar_chart(data=monthly_grouped, x='Month_Year', y='Amount', color="#0072B2")
 
-    # --- 7. THE MISSING MONTHLY LIST (STILL AT BELOW THIS ANALYTIC) ---
+    # 7. MONTHLY SUMMARY TABLE
     st.subheader("Monthly Spending Summary")
-    # Format the table to show newest months first
     trend_table = monthly_grouped[['Month_Year', 'Amount']].copy()
     trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
     trend_table.columns = ['Month_Year', 'Total Spent']
     st.table(trend_table)
+
+    # 8. FULL HISTORY ARCHIVE (The New Section You Requested)
+    st.divider()
+    st.header("📂 Full Expense Archive")
+    
+    # Selection for Year and Month
+    all_years = sorted(df_sidebar['Date'].dt.year.unique(), reverse=True)
+    selected_year = st.selectbox("Select Year to View", all_years)
+    
+    # Filter for the selected year
+    year_data = st.session_state.expenses_db.copy()
+    year_data['Date'] = pd.to_datetime(year_data['Date'])
+    filtered_year_df = year_data[year_data['Date'].dt.year == selected_year]
+    
+    # Selection for Month based on that year
+    available_months = ["All"] + list(filtered_year_df['Month_Year'].unique())
+    selected_month = st.selectbox(f"Select Month in {selected_year}", available_months)
+    
+    final_archive_df = filtered_year_df
+    if selected_month != "All":
+        final_archive_df = filtered_year_df[filtered_year_df['Month_Year'] == selected_month]
+    
+    # Display the final filtered archive
+    st.dataframe(
+        final_archive_df.sort_values('Date', ascending=False), 
+        use_container_width=True,
+        column_config={"Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")}
+    )
+
+else:
+    st.info("No data available yet.")
