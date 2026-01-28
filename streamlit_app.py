@@ -12,7 +12,7 @@ if 'expenses_db' not in st.session_state:
         columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
     )
 
-# Force Amount to numeric to fix RM 0.00 and chart errors
+# Force Amount to numeric to fix dashboard and chart errors
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
 # 3. SIDEBAR DASHBOARD
@@ -31,7 +31,24 @@ with st.expander("➕ Add New Expense", expanded=True):
         month_year = date_input.strftime("%B %Y")
         item_name = st.text_input("Item Name")
         amount_input = st.number_input("Amount (RM)", min_value=0.0, step=0.01)
-        category = st.selectbox("Category", ["Water Bill", "House Rent", "Internet Bill", "Groceries", "Foods", "Baverages", "Self Rewards"])
+        
+        # YOUR UPDATED CATEGORY LIST
+        category = st.selectbox("Category", [
+            "House Rent", 
+            "Utilities Bill", 
+            "Groceries", 
+            "Beverages", 
+            "Food", 
+            "Self Rewards", 
+            "Personal Loan", 
+            "Car Loan", 
+            "Motorcycle Loan", 
+            "Others Bank Loan", 
+            "Insurances", 
+            "Gift", 
+            "Others"
+        ])
+        
         submit_button = st.form_submit_button("Submit")
 
     if submit_button:
@@ -58,7 +75,7 @@ if month_filter != "All":
 
 st.dataframe(filtered_df, use_container_width=True)
 
-# 6. CATEGORY ANALYTICS (Percentages)
+# 6. CATEGORY ANALYTICS
 if not st.session_state.expenses_db.empty:
     st.header("Spending Analytics & Percentages")
     chart_df = filtered_df.copy()
@@ -77,14 +94,12 @@ if not st.session_state.expenses_db.empty:
 
     # 7. MONTHLY TREND (Sorted Newest First)
     st.header("Spending by Month & Year")
-    # Group and create a sorting date
-    monthly_summary = chart_df.groupby('Month_Year')['Amount'].sum().reset_index()
-    monthly_summary['Sort_Date'] = pd.to_datetime(monthly_summary['Month_Year'], format='%B %Y')
+    monthly_summary = st.session_state.expenses_db.groupby('Month_Year')['Amount'].sum().reset_index()
     
-    # Sort descending (Newest date at top)
+    # Sorting logic for Month/Year order
+    monthly_summary['Sort_Date'] = pd.to_datetime(monthly_summary['Month_Year'], format='%B %Y')
     monthly_summary = monthly_summary.sort_values(by='Sort_Date', ascending=False)
     
-    # Display Chart and Table
     st.bar_chart(data=monthly_summary, x='Month_Year', y='Amount')
     
     trend_table = monthly_summary[['Month_Year', 'Amount']].copy()
