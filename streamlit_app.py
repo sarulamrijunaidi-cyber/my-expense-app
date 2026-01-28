@@ -113,9 +113,19 @@ with st.expander("➕ Add New Expense"):
             st.success("Saved!")
             st.rerun()
 
-# 7. RECENT HISTORY (Latest Month)
+# 7. RECENT HISTORY (Updated with RM and 2 Decimals)
 st.header(f"📝 Recent History ({current_month})")
-st.dataframe(user_data[user_data['Month_Year'] == current_month].sort_values('Date', ascending=False), use_container_width=True)
+st.dataframe(
+    user_data[user_data['Month_Year'] == current_month].sort_values('Date', ascending=False), 
+    use_container_width=True,
+    column_config={
+        "Amount": st.column_config.NumberColumn(
+            "Amount",
+            help="Total amount in RM",
+            format="RM %.2f",  # Adds RM and ensures 2 decimal places
+        )
+    }
+)
 
 # 8. DATA ANALYTICS
 if not user_data.empty:
@@ -129,12 +139,15 @@ if not user_data.empty:
         st.bar_chart(user_data.groupby('Category')['Amount'].sum(), color="#FF4B4B")
         
     with c2:
-        st.subheader("Monthly Spend")
-        # Prepares data by Month and Year for the chart
+        st.subheader("Monthly Spending Summary")
         summary = user_data.copy()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
-        monthly_data = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index()
-        monthly_data = monthly_data.sort_values('Sort_Date')
+        monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
+        
+        # Formatting the summary table
+        trend_table = monthly_grouped[['Month_Year', 'Amount']].copy()
+        trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format) # Fixes 35.0000 to RM 35.00
+        st.table(trend_table)
         
         # Displays the chart with a different color (Blue)
         st.bar_chart(data=monthly_data, x='Month_Year', y='Amount', color="#0072B2")
