@@ -3,8 +3,8 @@ import pandas as pd
 import datetime
 
 # 1. APP CONFIGURATION
-st.set_page_config(page_title="Mothly's Expense App", layout="wide")
-st.title("📊 Mothly's Expense Tracker")
+st.set_page_config(page_title="Sarul's Expense App", layout="wide")
+st.title("📊 Sarul's Expense Tracker")
 
 # 2. DATABASE SETUP
 if 'expenses_db' not in st.session_state:
@@ -12,35 +12,26 @@ if 'expenses_db' not in st.session_state:
         columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
     )
 
-# Force Amount to numeric to prevent calculation errors
+# Force numeric for math
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
 # 3. SIDEBAR DASHBOARD - MULTI-LEVEL TRACKING
 st.sidebar.header("📍 Dashboard")
-
-# Ensure all data is numeric before calculating
 df = st.session_state.expenses_db.copy()
-df['Amount'] = pd.to_numeric(df['Amount'], errors='coerce').fillna(0)
 df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 
-# --- 1. LATEST MONTH AMOUNT ---
-# Get current month/year to show the most recent spending
+# Calculations for the 3 Categories
 current_month = datetime.date.today().strftime("%B %Y")
 latest_month_total = df[df['Month_Year'] == current_month]['Amount'].sum()
-st.sidebar.metric(f"Spent in {current_month}", f"RM {latest_month_total:.2f}")
-
-# --- 2. TOTAL AMOUNT FOR 2026 ---
-# Specifically filters for the current year
 latest_year_total = df[df['Date'].dt.year == 2026]['Amount'].sum()
-st.sidebar.metric("Total for 2026", f"RM {latest_year_total:.2f}")
-
-# --- 3. OVERALL TOTAL AMOUNT ---
-# Sum of every expense ever added
 overall_total = df['Amount'].sum()
-st.sidebar.metric("Overall Total", f"RM {overall_total:.2f}")
+
+# Display with RM Currency format
+st.sidebar.metric(f"Spent in {current_month}", f"RM {latest_month_total:,.2f}")
+st.sidebar.metric("Total for 2026", f"RM {latest_year_total:,.2f}")
+st.sidebar.metric("Overall Total", f"RM {overall_total:,.2f}")
 
 st.sidebar.divider()
-
 if st.sidebar.button("🗑️ Reset All Data"):
     st.session_state.expenses_db = pd.DataFrame(columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category'])
     st.rerun()
@@ -59,59 +50,51 @@ with st.expander("➕ Add New Expense", expanded=False):
                 "Food", "Self Rewards", "Personal Loan", "Car Loan", 
                 "Motorcycle Loan", "Others Bank Loan", "Insurances", "Gift", "Others"
             ])
-        
-        month_year = date_input.strftime("%B %Y")
         submit_button = st.form_submit_button("Submit Expense")
 
-    if submit_button:
-        if item_name and amount_input > 0:
-            new_entry = pd.DataFrame({
-                'Date': [date_input],
-                'Month_Year': [month_year],
-                'Item_Name': [item_name],
-                'Amount': [float(amount_input)],
-                'Category': [category]
-            })
-            st.session_state.expenses_db = pd.concat([st.session_state.expenses_db, new_entry], ignore_index=True)
-            st.success(f"Successfully added {item_name}!")
-            st.rerun()
+    if submit_button and item_name and amount_input > 0:
+        new_entry = pd.DataFrame({
+            'Date': [date_input], 'Month_Year': [date_input.strftime("%B %Y")],
+            'Item_Name': [item_name], 'Amount': [float(amount_input)], 'Category': [category]
+        })
+        st.session_state.expenses_db = pd.concat([st.session_state.expenses_db, new_entry], ignore_index=True)
+        st.rerun()
 
-# 5. HISTORY TABLE
-st.header("📝 Expense History")
-st.dataframe(st.session_state.expenses_db, use_container_width=True)
+# 5. EDIT & DELETE SECTION
+st.header("📝 Expense History (Click to Edit)")
 
-# 6. ATTRACTIVE & COMPACT ANALYTICS
+# Editable table: You can change details directly here
+edited_df = st.data_editor(
+    st.session_state.expenses_db,
+    column_config={
+        "Amount": st.column_config.NumberColumn("Amount", format="RM %.2f"), # Currency format
+    },
+    use_container_width=True,
+    num_rows="dynamic" # This allows you to delete rows by selecting and pressing 'Delete'
+)
+st.session_state.expenses_db = edited_df
+
+# Manual Delete Last Entry Button
+if not st.session_state.expenses_db.empty:
+    if st.button("❌ Delete Last Entry"):
+        st.session_state.expenses_db = st.session_state.expenses_db.drop(st.session_state.expenses_db.index[-1])
+        st.rerun()
+
+# 6. ANALYTICS
 if not st.session_state.expenses_db.empty:
     st.divider()
     st.header("📈 Data Analytics")
+    c1, c2 = st.columns(2)
     
-    # Create two small columns for charts
-    chart_col1, chart_col2 = st.columns(2)
-    
-    chart_df = st.session_state.expenses_db.copy()
-    
-    with chart_col1:
-        st.subheader("Category Totals")
-        cat_totals = chart_df.groupby('Category')['Amount'].sum()
-        # Different colors for each category to make it attractive
-        st.bar_chart(cat_totals, color="#FF4B4B") 
+    with c1:
+        st.subheader("By Category")
+        cat_data = st.session_state.expenses_db.groupby('Category')['Amount'].sum()
+        st.bar_chart(cat_data, color="#FF4B4B")
             
-    with chart_col2:
+    with c2:
         st.subheader("Monthly Trend")
-        # Sort months newest first
-        summary = chart_df.groupby('Month_Year')['Amount'].sum().reset_index()
+        summary = st.session_state.expenses_db.copy()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
-        summary = summary.sort_values(by='Sort_Date', ascending=False)
+        summary = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index()
+        summary = summary.sort_values('Sort_Date', ascending=False)
         st.bar_chart(data=summary, x='Month_Year', y='Amount', color="#0072B2")
-
-    # Small Percentage Table
-    st.subheader("Spending Breakdown (%)")
-    grand_total = cat_totals.sum()
-    if grand_total > 0:
-        percent_df = pd.DataFrame({
-            'Total RM': cat_totals.map('RM {:.2f}'.format),
-            'Percentage (%)': ((cat_totals / grand_total) * 100).map('{:.1f}%'.format)
-        })
-        st.table(percent_df)
-else:
-    st.info("Add expenses to see your analytics dashboard!")
