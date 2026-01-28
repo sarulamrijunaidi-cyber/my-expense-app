@@ -103,7 +103,7 @@ with st.expander("➕ Add New Expense"):
         d = st.date_input("Date", datetime.date.today())
         item = st.text_input("Item Name")
         amt = st.number_input("Amount (RM)", min_value=0.0)
-        cat = st.selectbox("Category", ["Food", "Bills", "Groceries", "Self Rewards", "Other"])
+        cat = st.selectbox("Category", ["Bank Loan", "Beverages", "Credit Card", "Food", "Groceries", "Hire Purchase Loan", "House Rent", "Online Shopping", "Self Rewards", "Utilities", "Other"])
         if st.form_submit_button("Submit"):
             new_row = pd.DataFrame([{
                 "Username": current_user, "Date": d, "Month_Year": d.strftime("%B %Y"),
