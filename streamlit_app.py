@@ -12,7 +12,7 @@ if 'expenses_db' not in st.session_state:
         columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
     )
 
-# Force Amount to numeric to prevent any calculation errors
+# Force Amount to numeric to prevent calculation errors
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
 # 3. SIDEBAR DASHBOARD
@@ -55,51 +55,36 @@ with st.expander("➕ Add New Expense", expanded=False):
             st.success(f"Successfully added {item_name}!")
             st.rerun()
 
-# 5. HISTORY & FILTERS
+# 5. HISTORY TABLE
 st.header("📝 Expense History")
-unique_months = ["All"] + list(st.session_state.expenses_db['Month_Year'].unique())
-month_filter = st.selectbox("Quick Filter by Month", unique_months)
+st.dataframe(st.session_state.expenses_db, use_container_width=True)
 
-filtered_df = st.session_state.expenses_db
-if month_filter != "All":
-    filtered_df = filtered_df[filtered_df['Month_Year'] == month_filter]
-
-st.dataframe(filtered_df, use_container_width=True)
-
-# 6. ATTRACTIVE ANALYTICS SECTION
+# 6. ATTRACTIVE & COMPACT ANALYTICS
 if not st.session_state.expenses_db.empty:
     st.divider()
     st.header("📈 Data Analytics")
     
-    # Create two columns to make charts smaller and side-by-side
+    # Create two small columns for charts
     chart_col1, chart_col2 = st.columns(2)
     
-    # Clean data for charting
-    chart_df = filtered_df.copy()
-    chart_df['Amount'] = pd.to_numeric(chart_df['Amount'], errors='coerce').fillna(0)
+    chart_df = st.session_state.expenses_db.copy()
     
     with chart_col1:
-        st.subheader("Category Breakdown")
+        st.subheader("Category Totals")
         cat_totals = chart_df.groupby('Category')['Amount'].sum()
-        if not cat_totals.empty:
-            # Use a bar chart with a custom color
-            st.bar_chart(cat_totals, color="#FF4B4B") 
+        # Different colors for each category to make it attractive
+        st.bar_chart(cat_totals, color="#FF4B4B") 
             
     with chart_col2:
-        st.subheader("Monthly Spending Trend")
-        monthly_summary = st.session_state.expenses_db.copy()
-        monthly_summary['Amount'] = pd.to_numeric(monthly_summary['Amount'], errors='coerce').fillna(0)
-        
+        st.subheader("Monthly Trend")
         # Sort months newest first
-        summary = monthly_summary.groupby('Month_Year')['Amount'].sum().reset_index()
+        summary = chart_df.groupby('Month_Year')['Amount'].sum().reset_index()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
         summary = summary.sort_values(by='Sort_Date', ascending=False)
-        
-        # Use a different color for the trend chart
         st.bar_chart(data=summary, x='Month_Year', y='Amount', color="#0072B2")
 
-    # Percentage Table at the bottom
-    st.subheader("Spending Percentages")
+    # Small Percentage Table
+    st.subheader("Spending Breakdown (%)")
     grand_total = cat_totals.sum()
     if grand_total > 0:
         percent_df = pd.DataFrame({
@@ -108,4 +93,4 @@ if not st.session_state.expenses_db.empty:
         })
         st.table(percent_df)
 else:
-    st.info("Start adding expenses to unlock the analytics dashboard!")
+    st.info("Add expenses to see your analytics dashboard!")
