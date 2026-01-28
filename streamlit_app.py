@@ -44,7 +44,7 @@ with st.expander("➕ Add New Expense", expanded=True):
                 'Date': [date_input],
                 'Month_Year': [month_year],
                 'Item_Name': [item_name],
-                'Amount': [amount],
+                'Amount': [float(amount)], # This ensures it is a number
                 'Category': [category]
             })
             st.session_state.expenses_db = pd.concat([st.session_state.expenses_db, new_entry], ignore_index=True)
@@ -72,4 +72,4 @@ if not st.session_state.expenses_db.empty:
     st.write(f"Spending Breakdown for {month_filter}")
     st.pie_chart(chart_data)
 else:
-    st.info("No data available yet. Please add an expense to see analytics.")
+    st.info("No data available yet. Please add an expense to see analytics.") 
