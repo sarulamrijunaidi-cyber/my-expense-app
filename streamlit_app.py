@@ -74,12 +74,16 @@ st.dataframe(filtered_df, use_container_width=True)
 # 6. ANALYTICS (Matching your Page 5 sketch)
 if not st.session_state.expenses_db.empty:
     st.header("Expenses Analytics")
-    # Only use data where Amount is a valid number
-    chart_df = filtered_df.dropna(subset=['Amount'])
+    
+    # This is the magic line that fixes the error:
+    # It converts the Amount to numbers right before making the chart
+    chart_df = filtered_df.copy()
+    chart_df['Amount'] = pd.to_numeric(chart_df['Amount'], errors='coerce').fillna(0)
+    
     chart_data = chart_df.groupby('Category')['Amount'].sum()
     
-    if not chart_data.empty:
+    if not chart_data.empty and chart_data.sum() > 0:
         st.write(f"Spending Breakdown for {month_filter}")
         st.pie_chart(chart_data)
-else:
-    st.info("No data available yet. Please add an expense to see analytics.") 
+    else:
+        st.info("Add an expense with an amount greater than 0 to see the chart.")
