@@ -12,8 +12,7 @@ if 'expenses_db' not in st.session_state:
         columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
     )
 
-# THE NEW CLEANING LINE:
-# This forces every row in the Amount column to become a real number
+# FORCE CONVERSION: This fixes the RM 0.00 error
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
 # 3. SIDEBAR - DASHBOARD TOTAL (Like Page 2 of your sketch)
@@ -21,6 +20,10 @@ st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce')
 total_spent = st.session_state.expenses_db['Amount'].sum()
 st.sidebar.metric("Total Expenses", f"RM {total_spent:.2f}")
+# Button to wipe out old "text" data
+if st.sidebar.button("🗑️ Reset All Data"):
+    st.session_state.expenses_db = pd.DataFrame(columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category'])
+    st.rerun()
 
 # 4. ADD ITEM FORM (Matching your Page 3 sketch)
 with st.expander("➕ Add New Expense", expanded=True):
