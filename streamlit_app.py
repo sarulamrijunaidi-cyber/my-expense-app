@@ -100,6 +100,7 @@ st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top:
 
 # Fixed Overall Total Display
 st.sidebar.write("Overall Total")
+# This line MUST use the 'overall_total' variable calculated at line 71
 st.sidebar.markdown(
     f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
     f"RM {overall_total:,.2f}</h2>", 
