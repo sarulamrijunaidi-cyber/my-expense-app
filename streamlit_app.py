@@ -103,10 +103,19 @@ with st.expander("➕ Add New Expense", expanded=False):
 
     if submit_button and item_name and amount_input > 0:
         new_entry = pd.DataFrame({
-            'Date': [date_input], 'Month_Year': [date_input.strftime("%B %Y")],
-            'Item_Name': [item_name], 'Amount': [float(amount_input)], 'Category': [category]
+            'Date': [date_input], 
+            'Month_Year': [date_input.strftime("%B %Y")], 
+            'Item_Name': [item_name], 
+            'Amount': [float(amount_input)], 
+            'Category': [category]
         })
+        # Add to memory
         st.session_state.expenses_db = pd.concat([st.session_state.expenses_db, new_entry], ignore_index=True)
+        
+        # --- NEW: SAVE TO PERMANENT FILE ---
+        st.session_state.expenses_db.to_csv(DB_FILE, index=False)
+        
+        st.success("Saved permanently!")
         st.rerun()
 
 # 5. LATEST MONTH HISTORY
