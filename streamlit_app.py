@@ -16,11 +16,8 @@ if not os.path.exists(USER_DB):
 if not os.path.exists(EXPENSE_DB):
     pd.DataFrame(columns=['Username', 'Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']).to_csv(EXPENSE_DB, index=False)
 
-# Load and fix missing 'Username' column
-expenses_df = pd.read_csv(EXPENSE_DB)
-if 'Username' not in expenses_df.columns:
-    expenses_df['Username'] = 'Watie'
-    expenses_df.to_csv(EXPENSE_DB, index=False)
+# Load data and ensure the file is up to date
+full_db = pd.read_csv(EXPENSE_DB)
 
 # 3. LOGIN & REGISTER SYSTEM
 if 'authenticated' not in st.session_state:
@@ -56,19 +53,20 @@ if not st.session_state.authenticated:
 # 4. DASHBOARD CALCULATIONS (Updated for Deletion Support)
 current_user = st.session_state.username
 
-# ALWAYS reload fresh data from the file to reflect deletions
+# ALWAYS reload fresh data to reflect deletions immediately
 full_db = pd.read_csv(EXPENSE_DB) 
 
 # Apply user filtering and numeric conversion
 full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
+# Clean up dates to prevent 'nan' in Archive
 full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
 user_data = full_db[full_db['Username'] == current_user].copy()
 
-# Recalculate Totals
+# Recalculate Totals based only on remaining rows
 current_month = datetime.date.today().strftime("%B %Y")
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
 year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
-overall_total = user_data['Amount'].sum() # This will now be 0.00 if all rows are deleted
+overall_total = user_data['Amount'].sum()
 
 # 5. SIDEBAR DISPLAY
 st.sidebar.title(f"👤 {current_user}")
@@ -85,22 +83,23 @@ current_budget = st.session_state.monthly_budgets.get(f"{current_user}_{current_
 new_budget = st.sidebar.number_input(f"Set Budget", min_value=0.0, value=float(current_budget))
 st.session_state.monthly_budgets[f"{current_user}_{current_month}"] = new_budget
 
-# FIX for NameError: Calculate remaining_budget BEFORE line 90
+# FIX for NameError: Calculate remaining_budget BEFORE displaying it
 remaining_budget = new_budget - month_spent
 
 st.sidebar.write(f"Spent in {current_month}")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {month_spent:,.2f}</h2>", unsafe_allow_html=True)
 
 st.sidebar.write("Remaining Budget")
-# Logic for colored budget display
 display_val = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
 st.sidebar.markdown(f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>{display_val}</h2>", unsafe_allow_html=True)
 
 st.sidebar.divider()
 
+# Ensure Total for 2026 appears clearly
 st.sidebar.write("Total for 2026")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
 
+# Fixed Overall Total synced with line 71
 st.sidebar.write("Overall Total")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
 
@@ -135,12 +134,12 @@ edited_df = st.data_editor(
 )
 
 if st.button("💾 Save Changes (Update/Delete)"):
-    # Correct saving logic for multi-user support
+    # Remove user's old data and save the edited version
     other_users_data = full_db[full_db['Username'] != current_user]
     updated_full_db = pd.concat([other_users_data, edited_df], ignore_index=True)
     updated_full_db.to_csv(EXPENSE_DB, index=False)
     st.success("Database updated successfully!")
-    st.rerun() # Forces reload of calculations at line 60
+    st.rerun() # Refresh to update sidebar totals immediately
 
 # 8. DATA ANALYTICS
 if not user_data.empty:
@@ -158,6 +157,7 @@ if not user_data.empty:
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
         monthly_data = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date')
         
+        # Format table with RM and 2 decimals
         trend_table = monthly_data[['Month_Year', 'Amount']].copy()
         trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
         st.table(trend_table)
@@ -165,20 +165,28 @@ if not user_data.empty:
     st.subheader("Monthly Spend Trend")
     st.bar_chart(data=monthly_data, x='Month_Year', y='Amount', color="#0072B2")
 
-    # 9. FULL HISTORY ARCHIVE
+    # 9. FULL HISTORY ARCHIVE (Fixed for Deletion and 'nan' errors)
     st.divider()
     st.header("📂 Full Expense Archive")
-    all_years = sorted(user_data['Date'].dt.year.unique(), reverse=True)
-    selected_year = st.selectbox("Select Year to View", all_years)
-    year_filtered_df = user_data[user_data['Date'].dt.year == selected_year]
-    available_months = sorted(year_filtered_df['Month_Year'].unique())
-    selected_month = st.selectbox(f"Select Month in {selected_year}", available_months)
     
-    archive_display = year_filtered_df[year_filtered_df['Month_Year'] == selected_month]
-    st.dataframe(
-        archive_display.sort_values('Date', ascending=False), 
-        use_container_width=True,
-        column_config={"Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")}
-    )
+    # Filter only years that actually have data
+    valid_years = user_data['Date'].dt.year.dropna().unique()
+    
+    if len(valid_years) > 0:
+        all_years = sorted(valid_years.astype(int), reverse=True)
+        selected_year = st.selectbox("Select Year to View", all_years)
+        year_filtered_df = user_data[user_data['Date'].dt.year == selected_year]
+        
+        available_months = sorted(year_filtered_df['Month_Year'].unique())
+        selected_month = st.selectbox(f"Select Month in {selected_year}", available_months)
+        
+        archive_display = year_filtered_df[year_filtered_df['Month_Year'] == selected_month]
+        st.dataframe(
+            archive_display.sort_values('Date', ascending=False), 
+            use_container_width=True,
+            column_config={"Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")}
+        )
+    else:
+        st.info("No data available to archive yet.")
 else:
     st.info("No data available yet.")
