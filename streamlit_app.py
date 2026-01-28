@@ -98,8 +98,13 @@ st.sidebar.divider()
 st.sidebar.write("Total for 2026")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
 
+# Fixed Overall Total Display
 st.sidebar.write("Overall Total")
-st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
+st.sidebar.markdown(
+    f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
+    f"RM {overall_total:,.2f}</h2>", 
+    unsafe_allow_html=True
+)
 
 # 6. MAIN PAGE FORM
 st.title(f"📊 {current_user}'s Tracker")
@@ -121,7 +126,6 @@ with st.expander("➕ Add New Expense"):
 # 7. RECENT HISTORY (With Delete & Edit Support)
 st.header(f"📝 Recent History ({current_month})")
 
-# num_rows="dynamic" allows you to delete rows by selecting them
 edited_df = st.data_editor(
     user_data[user_data['Month_Year'] == current_month].sort_values('Date', ascending=False),
     use_container_width=True,
@@ -134,25 +138,11 @@ edited_df = st.data_editor(
 
 # 7.1 SAVE CHANGES BUTTON
 if st.button("💾 Save Changes (Update/Delete)"):
-    # Remove this user's old data from the main database
     other_users_data = full_db[full_db['Username'] != current_user]
-    
-    # Add the newly edited (or reduced) data back in
     updated_full_db = pd.concat([other_users_data, edited_df], ignore_index=True)
-    
-    # Save permanently to CSV
     updated_full_db.to_csv(EXPENSE_DB, index=False)
     st.success("Database updated successfully!")
-    st.rerun()
-
-# Save changes back to the permanent CSV file if you edit a cell
-if st.button("💾 Save Changes to History"):
-    # Combine the edited user data with the rest of the database
-    other_users_data = full_db[full_db['Username'] != current_user]
-    updated_full_db = pd.concat([other_users_data, edited_df], ignore_index=True)
-    updated_full_db.to_csv(EXPENSE_DB, index=False)
-    st.success("History updated!")
-    st.rerun()
+    st.rerun() # Refresh to update sidebar totals
 
 # 8. DATA ANALYTICS
 if not user_data.empty:
@@ -168,32 +158,24 @@ if not user_data.empty:
         st.subheader("Monthly Spending Summary")
         summary = user_data.copy()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
-        # Defines monthly_data for the chart below
         monthly_data = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date')
         
-        # Formatting summary table with RM and 2 decimals
         trend_table = monthly_data[['Month_Year', 'Amount']].copy()
         trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
         st.table(trend_table)
 
-    # Monthly Spend Trend Chart
     st.subheader("Monthly Spend Trend")
     st.bar_chart(data=monthly_data, x='Month_Year', y='Amount', color="#0072B2")
 
     # 9. FULL HISTORY ARCHIVE
     st.divider()
     st.header("📂 Full Expense Archive")
-    
-    # Filter by Year
     all_years = sorted(user_data['Date'].dt.year.unique(), reverse=True)
     selected_year = st.selectbox("Select Year to View", all_years)
     year_filtered_df = user_data[user_data['Date'].dt.year == selected_year]
-    
-    # Filter by Month
     available_months = sorted(year_filtered_df['Month_Year'].unique())
     selected_month = st.selectbox(f"Select Month in {selected_year}", available_months)
     
-    # Display Filtered Results with RM format
     archive_display = year_filtered_df[year_filtered_df['Month_Year'] == selected_month]
     st.dataframe(
         archive_display.sort_values('Date', ascending=False), 
