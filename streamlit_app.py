@@ -72,7 +72,7 @@ if not st.session_state.expenses_db.empty:
     chart_df = filtered_df.copy()
     chart_df['Amount'] = pd.to_numeric(chart_df['Amount'], errors='coerce').fillna(0)
     
-    # GROUPING FIX: Ensure we only group valid, positive numbers
+    # Only use items where Amount is more than 0 to prevent the chart crash
     chart_data = chart_df[chart_df['Amount'] > 0].groupby('Category')['Amount'].sum()
     
     if not chart_data.empty:
