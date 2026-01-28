@@ -13,23 +13,28 @@ if 'expenses_db' not in st.session_state:
     )
 
 # 2.1 BUDGET SETUP
-# This stores your budget for each month
 if 'monthly_budgets' not in st.session_state:
     st.session_state.monthly_budgets = {}
 
 # Force numeric for calculations
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
-# 3. SIDEBAR DASHBOARD
+# 3. SIDEBAR DASHBOARD & BUDGET
 st.sidebar.header("📍 Dashboard")
+
+# AUTOMATIC MONTH DETECTION: Detects if it is January, February, etc.
 current_month_name = datetime.date.today().strftime("%B %Y")
 
-# --- BUDGET SETTING SECTION ---
 st.sidebar.subheader("💰 Monthly Budget")
-# Let user set or update the budget for the current month
+# Current Budget for the detected month
 current_budget = st.session_state.monthly_budgets.get(current_month_name, 0.0)
 new_budget = st.sidebar.number_input(f"Set Budget for {current_month_name}", min_value=0.0, value=float(current_budget), step=50.0)
 st.session_state.monthly_budgets[current_month_name] = new_budget
+
+# NEW: RESET BUDGET BUTTON (Placed here as requested)
+if st.sidebar.button(f"🔄 Reset {current_month_name} Budget"):
+    st.session_state.monthly_budgets[current_month_name] = 0.0
+    st.rerun()
 
 # Calculations
 df_sidebar = st.session_state.expenses_db.copy()
@@ -41,7 +46,6 @@ remaining_budget = new_budget - latest_month_total
 # Display Metrics
 st.sidebar.metric(f"Spent in {current_month_name}", f"RM {latest_month_total:,.2f}")
 
-# Show remaining budget with color (red if over budget)
 if remaining_budget < 0:
     st.sidebar.error(f"Over Budget: RM {abs(remaining_budget):,.2f}")
 else:
@@ -91,7 +95,7 @@ st.data_editor(
     use_container_width=True, key="latest_editor"
 )
 
-# 6. ANALYTICS & 7. SUMMARY (Logic remains same as previous)
+# 6. ANALYTICS & 7. SUMMARY
 if not st.session_state.expenses_db.empty:
     st.divider()
     st.header("📈 Data Analytics")
