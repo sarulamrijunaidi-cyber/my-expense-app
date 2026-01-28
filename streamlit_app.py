@@ -57,7 +57,7 @@ if not st.session_state.authenticated:
                 st.success("Account created! Please login.")
     st.stop()
 
-# 4. DASHBOARD CALCULATIONS (Updated for Deletion Support)
+# 4. DASHBOARD CALCULATIONS (Fixed for Year Total)
 current_user = st.session_state.username
 
 # ALWAYS reload fresh data from the file to reflect deletions
@@ -65,15 +65,25 @@ full_db = pd.read_csv(EXPENSE_DB)
 
 # Apply user filtering and numeric conversion
 full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
+
+# Convert 'Date' to datetime objects and handle errors
 full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
+
+# Filter data for the logged-in user
 user_data = full_db[full_db['Username'] == current_user].copy()
 
 # Recalculate Totals
 current_month = datetime.date.today().strftime("%B %Y")
-month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
-year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
-overall_total = user_data['Amount'].sum() # This will be 0.00 if rows are deleted
+current_year = datetime.date.today().year
 
+# Filter for the current month
+month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
+
+# Fix: Filter for the current year using the .dt accessor
+year_total = user_data[user_data['Date'].dt.year == current_year]['Amount'].sum()
+
+# Calculate overall total
+overall_total = user_data['Amount'].sum()
 # 5. SIDEBAR DISPLAY
 st.sidebar.title(f"👤 {current_user}")
 if st.sidebar.button("Log Out"):
