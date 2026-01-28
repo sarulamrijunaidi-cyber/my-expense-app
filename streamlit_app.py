@@ -57,36 +57,28 @@ if not st.session_state.authenticated:
                 st.success("Account created! Please login.")
     st.stop()
 
-# 4. DASHBOARD CALCULATIONS (Enhanced Year Filtering)
+# 4. DASHBOARD CALCULATIONS (Fixed for Year Total)
 current_user = st.session_state.username
 
-# Load data and force Date conversion
-full_db = pd.read_csv(EXPENSE_DB)
+# Load data
+full_db = pd.read_csv(EXPENSE_DB) 
 
-# Ensure 'Amount' is numeric
+# 1. Convert Date column to actual datetime objects immediately
+full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
 full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
 
-# FORCE convert 'Date' to datetime. If it's already a date object, it handles it.
-# If there are empty dates, it turns them into 'NaT' (Not a Time)
-full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
-
-# Filter for the current user
+# 2. Filter for the current user
 user_data = full_db[full_db['Username'] == current_user].copy()
 
-# Recalculate Totals
+# 3. Get the current year
+this_year = 2026 
+
+# 4. Calculate totals
 current_month = datetime.date.today().strftime("%B %Y")
-
-# We use 2026 specifically as requested
-target_year = 2026
-
-# Filter for the current month
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
 
-# Fix: Filter using the year from the converted Date column
-# We remove rows with missing dates (NaT) to avoid errors
-year_total = user_data[user_data['Date'].dt.year == target_year]['Amount'].sum()
-
-# Calculate overall total
+# This line now works because we converted the column above
+year_total = user_data[user_data['Date'].dt.year == this_year]['Amount'].sum()
 overall_total = user_data['Amount'].sum()
 
 # 5. SIDEBAR DISPLAY
@@ -132,14 +124,21 @@ with st.expander("➕ Add New Expense"):
             amt = st.number_input("Amount (RM)", min_value=0.0)
             cat = st.selectbox("Category", ["Bank Loan", "Beverages", "Credit Card", "Food", "Groceries", "Hire Purchase Loan", "House Rent", "Online Shopping", "Self Rewards", "Utilities", "Other"])
         if st.form_submit_button("Submit"):
+            # Convert date to string format that pandas likes (YYYY-MM-DD)
+            save_date = d.strftime("%Y-%m-%d")
+            
             new_row = pd.DataFrame([{
-                "Username": current_user, "Date": d, "Month_Year": d.strftime("%B %Y"),
-                "Item_Name": item, "Amount": amt, "Category": cat
+                "Username": current_user, 
+                "Date": save_date, 
+                "Month_Year": d.strftime("%B %Y"),
+                "Item_Name": item, 
+                "Amount": amt, 
+                "Category": cat
             }])
             pd.concat([full_db, new_row], ignore_index=True).to_csv(EXPENSE_DB, index=False)
             st.success("Saved!")
             st.rerun()
-
+            
 # 7. RECENT HISTORY (With Delete & Edit Support)
 st.header(f"📝 Recent History ({current_month})")
 
