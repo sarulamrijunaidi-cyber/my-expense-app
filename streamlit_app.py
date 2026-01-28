@@ -107,3 +107,41 @@ if not st.session_state.expenses_db.empty:
         monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index()
         monthly_grouped = monthly_grouped.sort_values('Sort_Date', ascending=False)
         st.bar_chart(data=monthly_grouped, x='Month_Year', y='Amount', color="#0072B2")
+
+# 7. MONTHLY SUMMARY TABLE
+    st.subheader("Monthly Spending Summary")
+    trend_table = monthly_grouped[['Month_Year', 'Amount']].copy()
+    trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
+    trend_table.columns = ['Month_Year', 'Total Spent']
+    st.table(trend_table)
+
+    # 8. FULL HISTORY ARCHIVE (The New Section You Requested)
+    st.divider()
+    st.header("📂 Full Expense Archive")
+    
+    # Selection for Year and Month
+    all_years = sorted(df_sidebar['Date'].dt.year.unique(), reverse=True)
+    selected_year = st.selectbox("Select Year to View", all_years)
+    
+    # Filter for the selected year
+    year_data = st.session_state.expenses_db.copy()
+    year_data['Date'] = pd.to_datetime(year_data['Date'])
+    filtered_year_df = year_data[year_data['Date'].dt.year == selected_year]
+    
+    # Selection for Month based on that year
+    available_months = ["All"] + list(filtered_year_df['Month_Year'].unique())
+    selected_month = st.selectbox(f"Select Month in {selected_year}", available_months)
+    
+    final_archive_df = filtered_year_df
+    if selected_month != "All":
+        final_archive_df = filtered_year_df[filtered_year_df['Month_Year'] == selected_month]
+    
+    # Display the final filtered archive
+    st.dataframe(
+        final_archive_df.sort_values('Date', ascending=False), 
+        use_container_width=True,
+        column_config={"Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")}
+    )
+
+else:
+    st.info("No data available yet.")
