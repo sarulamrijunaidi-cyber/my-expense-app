@@ -64,20 +64,22 @@ if month_filter != "All":
 
 st.dataframe(filtered_df, use_container_width=True)
 
-# 6. ANALYTICS - FINAL FIX
-st.header("Expenses Analytics")
+# 6. ANALYTICS - FINAL SAFETY FIX
 if not st.session_state.expenses_db.empty:
-    # This line forces the computer to see the numbers clearly
-    chart_df = st.session_state.expenses_db.copy()
+    st.header("Expenses Analytics")
+    
+    # Create a clean copy and force numbers one last time
+    chart_df = filtered_df.copy()
     chart_df['Amount'] = pd.to_numeric(chart_df['Amount'], errors='coerce').fillna(0)
     
-    # Filter out anything that is 0 or less
+    # GROUPING FIX: Ensure we only group valid, positive numbers
     chart_data = chart_df[chart_df['Amount'] > 0].groupby('Category')['Amount'].sum()
     
     if not chart_data.empty:
         st.write(f"Spending Breakdown for {month_filter}")
-        st.pie_chart(chart_data) # This will now show your pie chart
+        # This will now display the pie chart correctly
+        st.pie_chart(chart_data) 
     else:
-        st.info("The chart will appear once you add an amount greater than 0.")
+        st.info("The chart will appear once you add an expense with an amount.")
 else:
-    st.info("Add your first expense to see the analytics!")
+    st.info("No data available yet.")
