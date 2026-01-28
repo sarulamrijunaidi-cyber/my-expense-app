@@ -53,17 +53,22 @@ if not st.session_state.authenticated:
                 st.success("Account created! Please login.")
     st.stop()
 
-# 4. DASHBOARD CALCULATIONS
+# 4. DASHBOARD CALCULATIONS (Updated for Deletion Support)
 current_user = st.session_state.username
-full_db = pd.read_csv(EXPENSE_DB) # Reload for fresh data
-user_data = full_db[full_db['Username'] == current_user].copy()
-user_data['Amount'] = pd.to_numeric(user_data['Amount'], errors='coerce').fillna(0)
-user_data['Date'] = pd.to_datetime(user_data['Date'], errors='coerce')
 
+# ALWAYS reload fresh data from the file to reflect deletions
+full_db = pd.read_csv(EXPENSE_DB) 
+
+# Apply user filtering and numeric conversion
+full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
+full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
+user_data = full_db[full_db['Username'] == current_user].copy()
+
+# Recalculate Totals
 current_month = datetime.date.today().strftime("%B %Y")
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
 year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
-overall_total = user_data['Amount'].sum()
+overall_total = user_data['Amount'].sum() # This will now be 0.00 if all rows are deleted
 
 # 5. SIDEBAR DISPLAY
 st.sidebar.title(f"👤 {current_user}")
