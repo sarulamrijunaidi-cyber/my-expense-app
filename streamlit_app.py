@@ -56,7 +56,7 @@ if not st.session_state.authenticated:
 # 4. DASHBOARD CALCULATIONS (Updated for Deletion Support)
 current_user = st.session_state.username
 
-# ALWAYS reload fresh data from the file to reflect deletions
+# ALWAYS reload fresh data from the file
 full_db = pd.read_csv(EXPENSE_DB) 
 
 # Apply user filtering and numeric conversion
@@ -64,11 +64,13 @@ full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
 full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
 user_data = full_db[full_db['Username'] == current_user].copy()
 
-# Recalculate Totals
+# Recalculate Totals based ONLY on your filtered data
 current_month = datetime.date.today().strftime("%B %Y")
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
 year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
-overall_total = user_data['Amount'].sum() # This will now be 0.00 if all rows are deleted
+
+# I changed the name to final_total to stop the RM 250.00 error
+final_total = user_data['Amount'].sum() 
 
 # 5. SIDEBAR DISPLAY
 st.sidebar.title(f"👤 {current_user}")
@@ -98,12 +100,11 @@ st.sidebar.divider()
 st.sidebar.write("Total for 2026")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
 
-# Fixed Overall Total Display
+# THE FIX: This now uses final_total which will be 0.00
 st.sidebar.write("Overall Total")
-# This line MUST use the 'overall_total' variable calculated at line 71
 st.sidebar.markdown(
     f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
-    f"RM {overall_total:,.2f}</h2>", 
+    f"RM {final_total:,.2f}</h2>", 
     unsafe_allow_html=True
 )
 
