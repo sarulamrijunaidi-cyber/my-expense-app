@@ -72,7 +72,7 @@ year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
 # I changed the name to final_total to stop the RM 250.00 error
 final_total = user_data['Amount'].sum() 
 
-# 5. SIDEBAR DISPLAY
+# --- 5. SIDEBAR DISPLAY (Fixed Totals) ---
 st.sidebar.title(f"👤 {current_user}")
 if st.sidebar.button("Log Out"):
     st.session_state.authenticated = False
@@ -80,31 +80,31 @@ if st.sidebar.button("Log Out"):
 
 st.sidebar.divider()
 st.sidebar.subheader("💰 Monthly Budget")
-if 'monthly_budgets' not in st.session_state:
-    st.session_state.monthly_budgets = {}
 
-current_budget = st.session_state.monthly_budgets.get(f"{current_user}_{current_month}", 0.0)
-new_budget = st.sidebar.number_input(f"Set Budget", min_value=0.0, value=float(current_budget))
-st.session_state.monthly_budgets[f"{current_user}_{current_month}"] = new_budget
-
-remaining_budget = new_budget - month_spent
-
+# Display Spent for the month
 st.sidebar.write(f"Spent in {current_month}")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {month_spent:,.2f}</h2>", unsafe_allow_html=True)
 
+# Display Remaining Budget
 st.sidebar.write("Remaining Budget")
 display_val = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
 st.sidebar.markdown(f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>{display_val}</h2>", unsafe_allow_html=True)
 
 st.sidebar.divider()
-st.sidebar.write("Total for 2026")
-st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
 
-# THE FIX: This now uses final_total which will be 0.00
+# --- THE FIX: This displays the Total for 2026 ---
+st.sidebar.write("Total for 2026")
+st.sidebar.markdown(
+    f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
+    f"RM {year_total:,.2f}</h2>", 
+    unsafe_allow_html=True
+)
+
+# This displays the Overall Total synced with line 71
 st.sidebar.write("Overall Total")
 st.sidebar.markdown(
     f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>"
-    f"RM {final_total:,.2f}</h2>", 
+    f"RM {overall_total:,.2f}</h2>", 
     unsafe_allow_html=True
 )
 
