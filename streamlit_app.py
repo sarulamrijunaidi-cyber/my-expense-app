@@ -46,10 +46,16 @@ remaining_budget = new_budget - latest_month_total
 # Display Metrics
 st.sidebar.metric(f"Spent in {current_month_name}", f"RM {latest_month_total:,.2f}")
 
-if remaining_budget < 0:
-    st.sidebar.error(f"Over Budget: RM {abs(remaining_budget):,.2f}")
+# --- Remaining Budget with Red Color Logic ---
+st.sidebar.write("Remaining Budget")
+
+# If budget is negative or low (e.g., less than RM 100), show in Red
+if remaining_budget < 100:
+    # Use HTML to force the color to Red
+    st.sidebar.markdown(f"<h2 style='color: #FF4B4B; padding: 0;'>RM {remaining_budget:,.2f}</h2>", unsafe_allow_html=True)
 else:
-    st.sidebar.metric("Remaining Budget", f"RM {remaining_budget:,.2f}")
+    # Keep standard color for safe budget levels
+    st.sidebar.metric("", f"RM {remaining_budget:,.2f}")
 
 st.sidebar.divider()
 latest_year_total = df_sidebar[df_sidebar['Date'].dt.year == 2026]['Amount'].sum()
