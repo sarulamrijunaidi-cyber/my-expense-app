@@ -7,11 +7,14 @@ st.set_page_config(page_title="Sarul's Expense App", layout="centered")
 st.title("Sarul's Expense Tracker")
 
 # 2. DATABASE SETUP
-# This replaces your Google Sheet by storing data in the browser's memory
 if 'expenses_db' not in st.session_state:
     st.session_state.expenses_db = pd.DataFrame(
         columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
     )
+
+# THE NEW CLEANING LINE:
+# This forces every row in the Amount column to become a real number
+st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
 # 3. SIDEBAR - DASHBOARD TOTAL (Like Page 2 of your sketch)
 # Force the Amount column to be numeric so the math works
