@@ -10,18 +10,16 @@ st.set_page_config(page_title="My Personal Tracker", page_icon="💰", layout="w
 USER_DB = 'users.csv'
 EXPENSE_DB = 'database.csv'
 
-# Ensure Users file exists
 if not os.path.exists(USER_DB):
     pd.DataFrame(columns=['Username', 'Password']).to_csv(USER_DB, index=False)
 
-# Ensure Expense file exists
 if not os.path.exists(EXPENSE_DB):
     pd.DataFrame(columns=['Username', 'Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']).to_csv(EXPENSE_DB, index=False)
 
-# Load data and fix missing 'Username' column if needed
+# Load data and fix missing 'Username' column
 expenses_df = pd.read_csv(EXPENSE_DB)
 if 'Username' not in expenses_df.columns:
-    expenses_df['Username'] = 'Watie' # Assign old data to Watie by default
+    expenses_df['Username'] = 'Watie'
     expenses_df.to_csv(EXPENSE_DB, index=False)
 
 # 3. LOGIN & REGISTER SYSTEM
@@ -29,9 +27,8 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    st.title("💰 Financial Tracker")
+    st.title("💰 Welcome to Financial Tracker")
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
-
     with tab1:
         u = st.text_input("Username", key="login_u")
         p = st.text_input("Password", type="password", key="login_p")
@@ -43,7 +40,6 @@ if not st.session_state.authenticated:
                 st.rerun()
             else:
                 st.error("Invalid username or password")
-
     with tab2:
         new_u = st.text_input("Choose Username", key="reg_u")
         new_p = st.text_input("Choose Password", type="password", key="reg_p")
@@ -57,32 +53,45 @@ if not st.session_state.authenticated:
                 st.success("Account created! You can now login.")
     st.stop()
 
-# 4. DASHBOARD (Only runs after Login)
+# 4. DASHBOARD CALCULATIONS
 current_user = st.session_state.username
-# Filter only the current user's data
 user_data = expenses_df[expenses_df['Username'] == current_user].copy()
 user_data['Amount'] = pd.to_numeric(user_data['Amount'], errors='coerce').fillna(0)
+user_data['Date'] = pd.to_datetime(user_data['Date'], errors='coerce')
 
-# Sidebar & Totals
+current_month = datetime.date.today().strftime("%B %Y")
+month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
+year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
+overall_total = user_data['Amount'].sum()
+
+# 5. SIDEBAR DISPLAY
 st.sidebar.title(f"👤 {current_user}")
 if st.sidebar.button("Log Out"):
     st.session_state.authenticated = False
     st.rerun()
 
-current_month = datetime.date.today().strftime("%B %Y")
-month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
-
+st.sidebar.divider()
 st.sidebar.write(f"Spent in {current_month}")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {month_spent:,.2f}</h2>", unsafe_allow_html=True)
 
-# 5. ADD EXPENSE
+st.sidebar.divider()
+st.sidebar.write("Total for 2026")
+st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
+
+st.sidebar.write("Overall Total")
+st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
+
+# 6. MAIN PAGE
 st.title(f"📊 {current_user}'s Tracker")
 with st.expander("➕ Add New Expense"):
     with st.form("add_form"):
-        d = st.date_input("Date", datetime.date.today())
-        item = st.text_input("Item Name")
-        amt = st.number_input("Amount (RM)", min_value=0.0)
-        cat = st.selectbox("Category", ["Food", "Bills", "Others"])
+        col1, col2 = st.columns(2)
+        with col1:
+            d = st.date_input("Date", datetime.date.today())
+            item = st.text_input("Item Name")
+        with col2:
+            amt = st.number_input("Amount (RM)", min_value=0.0)
+            cat = st.selectbox("Category", ["Food", "Bills", "Groceries", "Self Rewards", "Other"])
         if st.form_submit_button("Submit"):
             new_row = pd.DataFrame([{
                 "Username": current_user, "Date": d, "Month_Year": d.strftime("%B %Y"),
@@ -92,6 +101,22 @@ with st.expander("➕ Add New Expense"):
             st.success("Saved!")
             st.rerun()
 
-# 6. HISTORY
+# 7. HISTORY AND ANALYTICS
 st.header("📝 Recent History")
 st.dataframe(user_data.sort_values('Date', ascending=False), use_container_width=True)
+
+if not user_data.empty:
+    st.divider()
+    st.header("📈 Data Analytics")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("By Category")
+        st.bar_chart(user_data.groupby('Category')['Amount'].sum(), color="#FF4B4B")
+    with c2:
+        st.subheader("Monthly Spending Summary")
+        summary = user_data.copy()
+        summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
+        monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
+        st.table(monthly_grouped[['Month_Year', 'Amount']])
+else:
+    st.info("Start adding expenses to see your analytics!")
