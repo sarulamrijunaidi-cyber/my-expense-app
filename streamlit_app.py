@@ -16,7 +16,7 @@ if not os.path.exists(USER_DB):
 if not os.path.exists(EXPENSE_DB):
     pd.DataFrame(columns=['Username', 'Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']).to_csv(EXPENSE_DB, index=False)
 
-# Load data and fix missing 'Username' column
+# Load and fix missing 'Username' column
 expenses_df = pd.read_csv(EXPENSE_DB)
 if 'Username' not in expenses_df.columns:
     expenses_df['Username'] = 'Watie'
@@ -50,7 +50,7 @@ if not st.session_state.authenticated:
             elif new_u and new_p:
                 new_user = pd.DataFrame([{"Username": new_u, "Password": new_p}])
                 pd.concat([users, new_user], ignore_index=True).to_csv(USER_DB, index=False)
-                st.success("Account created! You can now login.")
+                st.success("Account created! Please login.")
     st.stop()
 
 # 4. DASHBOARD CALCULATIONS
@@ -71,8 +71,26 @@ if st.sidebar.button("Log Out"):
     st.rerun()
 
 st.sidebar.divider()
+
+# --- RESTORED BUDGET SECTION ---
+st.sidebar.subheader("💰 Monthly Budget")
+if 'monthly_budgets' not in st.session_state:
+    st.session_state.monthly_budgets = {}
+
+current_budget = st.session_state.monthly_budgets.get(f"{current_user}_{current_month}", 0.0)
+new_budget = st.sidebar.number_input(f"Set Budget", min_value=0.0, value=float(current_budget))
+st.session_state.monthly_budgets[f"{current_user}_{current_month}"] = new_budget
+
+remaining_budget = new_budget - month_spent
+
+# Large Metric Displays
 st.sidebar.write(f"Spent in {current_month}")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {month_spent:,.2f}</h2>", unsafe_allow_html=True)
+
+st.sidebar.write("Remaining Budget")
+display_color = "#FF4B4B" # Red
+display_val = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
+st.sidebar.markdown(f"<h2 style='color: {display_color}; font-size: 32px; font-weight: bold; margin-top: -15px;'>{display_val}</h2>", unsafe_allow_html=True)
 
 st.sidebar.divider()
 st.sidebar.write("Total for 2026")
@@ -81,17 +99,14 @@ st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top:
 st.sidebar.write("Overall Total")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
 
-# 6. MAIN PAGE
+# 6. MAIN PAGE FORM
 st.title(f"📊 {current_user}'s Tracker")
 with st.expander("➕ Add New Expense"):
     with st.form("add_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            d = st.date_input("Date", datetime.date.today())
-            item = st.text_input("Item Name")
-        with col2:
-            amt = st.number_input("Amount (RM)", min_value=0.0)
-            cat = st.selectbox("Category", ["Food", "Bills", "Groceries", "Self Rewards", "Other"])
+        d = st.date_input("Date", datetime.date.today())
+        item = st.text_input("Item Name")
+        amt = st.number_input("Amount (RM)", min_value=0.0)
+        cat = st.selectbox("Category", ["Food", "Bills", "Groceries", "Self Rewards", "Other"])
         if st.form_submit_button("Submit"):
             new_row = pd.DataFrame([{
                 "Username": current_user, "Date": d, "Month_Year": d.strftime("%B %Y"),
@@ -101,7 +116,7 @@ with st.expander("➕ Add New Expense"):
             st.success("Saved!")
             st.rerun()
 
-# 7. HISTORY AND ANALYTICS
+# 7. HISTORY & ANALYTICS
 st.header("📝 Recent History")
 st.dataframe(user_data.sort_values('Date', ascending=False), use_container_width=True)
 
@@ -113,10 +128,9 @@ if not user_data.empty:
         st.subheader("By Category")
         st.bar_chart(user_data.groupby('Category')['Amount'].sum(), color="#FF4B4B")
     with c2:
+        # Fixed Indentation here
         st.subheader("Monthly Spending Summary")
         summary = user_data.copy()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
         monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
         st.table(monthly_grouped[['Month_Year', 'Amount']])
-else:
-    st.info("Start adding expenses to see your analytics!")
