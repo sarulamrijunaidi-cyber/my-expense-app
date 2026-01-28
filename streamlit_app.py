@@ -113,18 +113,32 @@ with st.expander("➕ Add New Expense"):
             st.success("Saved!")
             st.rerun()
 
-# 7. RECENT HISTORY (Now Editable)
+# 7. RECENT HISTORY (With Delete & Edit Support)
 st.header(f"📝 Recent History ({current_month})")
 
-# Use data_editor instead of dataframe to allow fixing typos
+# num_rows="dynamic" allows you to delete rows by selecting them
 edited_df = st.data_editor(
     user_data[user_data['Month_Year'] == current_month].sort_values('Date', ascending=False),
     use_container_width=True,
+    num_rows="dynamic", 
     key="history_editor",
     column_config={
         "Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")
     }
 )
+
+# 7.1 SAVE CHANGES BUTTON
+if st.button("💾 Save Changes (Update/Delete)"):
+    # Remove this user's old data from the main database
+    other_users_data = full_db[full_db['Username'] != current_user]
+    
+    # Add the newly edited (or reduced) data back in
+    updated_full_db = pd.concat([other_users_data, edited_df], ignore_index=True)
+    
+    # Save permanently to CSV
+    updated_full_db.to_csv(EXPENSE_DB, index=False)
+    st.success("Database updated successfully!")
+    st.rerun()
 
 # Save changes back to the permanent CSV file if you edit a cell
 if st.button("💾 Save Changes to History"):
