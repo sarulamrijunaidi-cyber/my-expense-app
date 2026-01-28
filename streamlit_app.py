@@ -96,24 +96,34 @@ else:
     st.info("No data available yet.")
     st.info("No data available yet.")
 
-# 7. MONTHLY SPENDING TREND
+# 7. MONTHLY SPENDING TREND (Sorted from Newest to Oldest)
 st.header("Spending by Month & Year")
 
 if not st.session_state.expenses_db.empty:
-    # Clean the data to ensure numbers are valid
     trend_df = st.session_state.expenses_db.copy()
     trend_df['Amount'] = pd.to_numeric(trend_df['Amount'], errors='coerce').fillna(0)
     
-    # Group by the Month_Year column you created
-    monthly_trend = trend_df.groupby('Month_Year')['Amount'].sum()
+    # 1. Group by Month_Year
+    monthly_summary = trend_df.groupby('Month_Year')['Amount'].sum().reset_index()
     
-    # Sort them so they appear in order
-    st.write("Total spending for each month:")
-    st.bar_chart(monthly_trend)
+    # 2. Convert Month_Year to a real date so we can sort it
+    monthly_summary['Sort_Date'] = pd.to_datetime(monthly_summary['Month_Year'], format='%B %Y')
     
-    # Display a small summary table
-    trend_table = pd.DataFrame(monthly_trend).rename(columns={'Amount': 'Total Spent'})
-    trend_table['Total Spent'] = trend_table['Total Spent'].map('RM {:.2f}'.format)
+    # 3. Sort by the date (Descending = Newest first)
+    monthly_summary = monthly_summary.sort_values(by='Sort_Date', ascending=False)
+    
+    # Show the bar chart
+    st.write("Monthly comparison (Latest first):")
+    st.bar_chart(data=monthly_summary, x='Month_Year', y='Amount')
+    
+    # 4. Create the final table
+    trend_table = monthly_summary[['Month_Year', 'Amount']].copy()
+    trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
+    trend_table.columns = ['Month_Year', 'Total Spent']
+    
+    st.table(trend_table)
+else:
+    st.info("Add expenses from different months to see your monthly trend.")
     st.table(trend_table)
 else:
     st.info("Add more expenses from different months to see your spending trend.")
