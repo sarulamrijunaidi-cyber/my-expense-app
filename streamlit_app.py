@@ -22,26 +22,49 @@ if 'monthly_budgets' not in st.session_state:
 # Force numeric for math
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
-# 3. SIDEBAR DASHBOARD & BUDGET
-st.sidebar.header("📍 Dashboard")
-current_month_name = datetime.date.today().strftime("%B %Y")
+# 3. MAIN PAGE DASHBOARD & REMINDERS
+st.header("📍 Dashboard Summary")
 
-st.sidebar.subheader("💰 Monthly Budget")
-current_budget = st.session_state.monthly_budgets.get(current_month_name, 0.0)
-new_budget = st.sidebar.number_input(f"Set Budget for {current_month_name}", min_value=0.0, value=float(current_budget), step=50.0)
-st.session_state.monthly_budgets[current_month_name] = new_budget
+# --- NEW: CRUCIAL PAYMENT REMINDERS ---
+# You can set the due day for each category here (e.g., day 1 or day 5)
+due_dates = {
+    "House Rent": 1, 
+    "Car Loan": 5, 
+    "Motorcycle Loan": 5, 
+    "Personal Loan": 7, 
+    "Utilities Bill": 10
+}
 
-if st.sidebar.button(f"🔄 Reset {current_month_name} Budget"):
-    st.session_state.monthly_budgets[current_month_name] = 0.0
-    st.rerun()
+today = datetime.date.today()
+current_day = today.day
 
-# Calculations for Sidebar
-df_sidebar = st.session_state.expenses_db.copy()
-df_sidebar['Date'] = pd.to_datetime(df_sidebar['Date'], errors='coerce')
-latest_month_total = df_sidebar[df_sidebar['Month_Year'] == current_month_name]['Amount'].sum()
-remaining_budget = new_budget - latest_month_total
+st.subheader("⚠️ Payment Alerts")
+alerts_found = False
 
-st.sidebar.metric(f"Spent in {current_month_name}", f"RM {latest_month_total:,.2f}")
+for category, due_day in due_dates.items():
+    # Show alert if the due date is within the next 7 days
+    if due_day >= current_day and (due_day - current_day) <= 7:
+        st.warning(f"Reminder: **{category}** is due on the {due_day}st/th! Please prepare payment.")
+        alerts_found = True
+    elif current_day > due_day:
+        # Optional: Alert if the day has passed but no payment recorded yet
+        st.error(f"Alert: **{category}** due date ({due_day}st/th) has passed!")
+        alerts_found = True
+
+if not alerts_found:
+    st.success("All clear! No urgent payments due this week.")
+
+st.divider()
+
+# Existing Metric Boxes
+col1, col2, col3 = st.columns(3)
+# (Keep your existing calculation logic here for month_total, year_total, etc.)
+with col1:
+    st.metric(f"Spent in {current_month_name}", f"RM {month_total:,.2f}")
+with col2:
+    st.metric("Total for 2026", f"RM {year_total:,.2f}")
+with col3:
+    st.metric("Overall Total", f"RM {grand_total:,.2f}")
 
 # ALWAYS RED REMAINING BUDGET WITH NEGATIVE SUPPORT
 st.sidebar.write("Remaining Budget")
@@ -70,7 +93,7 @@ with st.expander("➕ Add New Expense"):
             item_name = st.text_input("Item Name")
         with col2:
             amount_input = st.number_input("Amount (RM)", min_value=0.0, step=0.01)
-            category = st.selectbox("Category", ["House Rent", "Utilities Bill", "Groceries", "Beverages", "Food", "Self Rewards", "Personal Loan", "Car Loan", "Motorcycle Loan", "Others Bank Loan", "Insurances", "Gift", "Others"])
+            category = st.selectbox("Category", ["House Rent", "Utilities Bill", "Groceries", "Beverages", "Food", "Self Rewards", "Personal Loan", "Car Loan", "Motorcycle Loan", "Credit Card", "Others Bank Loan", "Insurances", "Gift", "Others"])
         if st.form_submit_button("Submit Expense") and item_name and amount_input > 0:
             new_entry = pd.DataFrame({'Date': [date_input], 'Month_Year': [date_input.strftime("%B %Y")], 'Item_Name': [item_name], 'Amount': [float(amount_input)], 'Category': [category]})
             st.session_state.expenses_db = pd.concat([st.session_state.expenses_db, new_entry], ignore_index=True)
