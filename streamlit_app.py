@@ -4,13 +4,12 @@ import datetime
 
 # 1. APP CONFIGURATION
 st.set_page_config(
-    page_title="My Personal Tracker", # Changes browser tab name
-    page_icon="💰",                  # Changes icon
+    page_title="My Personal Tracker",
+    page_icon="💰",
     layout="wide"
 )
-st.title("💰 My Financial Tracker") # Big title on the page
 
-# 2. DATABASE SETUP
+# 2. DATABASE & BUDGET SETUP
 if 'expenses_db' not in st.session_state:
     st.session_state.expenses_db = pd.DataFrame(
         columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
@@ -21,6 +20,15 @@ if 'monthly_budgets' not in st.session_state:
 
 # Force numeric for math
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
+
+# --- PRE-CALCULATIONS (Fixes the NameError) ---
+df_calc = st.session_state.expenses_db.copy()
+df_calc['Date'] = pd.to_datetime(df_calc['Date'], errors='coerce')
+
+current_month_name = datetime.date.today().strftime("%B %Y")
+month_total = df_calc[df_calc['Month_Year'] == current_month_name]['Amount'].sum()
+year_total = df_calc[df_calc['Date'].dt.year == 2026]['Amount'].sum()
+grand_total = df_calc['Amount'].sum()
 
 # 3. MAIN DASHBOARD & PAYMENT ALERTS
 st.title("💰 My Financial Tracker")
