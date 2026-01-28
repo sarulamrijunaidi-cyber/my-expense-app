@@ -10,7 +10,7 @@ st.set_page_config(page_title="Personal Tracker", page_icon="💰", layout="wide
 USER_DB = 'users.csv'
 EXPENSE_DB = 'database.csv'
 
-# Initialize files if they don't exist
+# Create files if they are missing
 for file, cols in [(USER_DB, ['Username', 'Password']), (EXPENSE_DB, ['Username', 'Date', 'Month_Year', 'Item_Name', 'Amount', 'Category'])]:
     if not os.path.exists(file):
         pd.DataFrame(columns=cols).to_csv(file, index=False)
@@ -45,32 +45,24 @@ if not st.session_state.authenticated:
                 st.success("Account created!")
     st.stop()
 
-# 4. DASHBOARD CALCULATIONS (The Multi-User Fix)
+# 4. DASHBOARD CALCULATIONS (Fix for Haslina's Total)
 current_user = st.session_state.username
 
-# Load ALL data but FILTER immediately
+# Load all data but FILTER it immediately for the current user
 full_db = pd.read_csv(EXPENSE_DB) 
 full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
 full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
 
-# THIS IS THE KEY: Filter data for ONLY this user
+# ONLY use rows belonging to the logged-in user
 user_data = full_db[full_db['Username'] == current_user].copy()
 
-# Calculate totals using ONLY user_data
+# Calculate totals from user_data only
 current_month = datetime.date.today().strftime("%B %Y")
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
 year_total = user_data[user_data['Date'].dt.year == 2026]['Amount'].sum()
-overall_total = user_data['Amount'].sum() # This will correctly be 0.00 for Haslina
+overall_total = user_data['Amount'].sum() # Haslina will now see 0.00
 
-# 5. SIDEBAR CALCULATIONS
-if 'monthly_budgets' not in st.session_state:
-    st.session_state.monthly_budgets = {}
-
-# User-specific budget storage
-budget_key = f"{current_user}_{current_month}"
-current_budget = st.session_state.monthly_budgets.get(budget_key, 0.0)
-
-# 6. SIDEBAR DISPLAY
+# 5. SIDEBAR CALCULATIONS & DISPLAY
 st.sidebar.title(f"👤 {current_user}")
 if st.sidebar.button("Log Out"):
     st.session_state.authenticated = False
@@ -79,10 +71,15 @@ if st.sidebar.button("Log Out"):
 st.sidebar.divider()
 st.sidebar.subheader("💰 Budgeting")
 
-new_budget = st.sidebar.number_input("Set Monthly Budget", min_value=0.0, value=float(current_budget))
+if 'monthly_budgets' not in st.session_state:
+    st.session_state.monthly_budgets = {}
+
+budget_key = f"{current_user}_{current_month}"
+current_budget = st.session_state.monthly_budgets.get(budget_key, 0.0)
+new_budget = st.sidebar.number_input("Set Budget", min_value=0.0, value=float(current_budget))
 st.session_state.monthly_budgets[budget_key] = new_budget
 
-# FIX for Amri: Calculate remaining_budget BEFORE the sidebar displays it
+# FIX for Amri: Calculate remaining_budget BEFORE using it
 remaining_budget = new_budget - month_spent
 
 st.sidebar.write(f"Spent ({current_month})")
@@ -95,11 +92,10 @@ st.sidebar.markdown(f"<h2 style='color: {color}; font-size: 30px;'>RM {remaining
 st.sidebar.divider()
 st.sidebar.write("Total for 2026")
 st.sidebar.markdown(f"<h2 style='font-size: 30px;'>RM {year_total:,.2f}</h2>", unsafe_allow_html=True)
-
 st.sidebar.write("Overall Total")
 st.sidebar.markdown(f"<h2 style='font-size: 30px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
 
-# 7. MAIN PAGE FORM
+# 6. MAIN PAGE FORM
 st.title(f"📊 {current_user}'s Dashboard")
 with st.expander("➕ Add New Entry"):
     with st.form("add_form"):
@@ -113,20 +109,18 @@ with st.expander("➕ Add New Entry"):
             st.success("Saved!")
             st.rerun()
 
-# 8. HISTORY & DELETE
+# 7. HISTORY & DELETE
 st.header("📝 Recent History")
-# Only show history for the current user
 history_view = user_data[user_data['Month_Year'] == current_month]
 edited_df = st.data_editor(history_view, use_container_width=True, num_rows="dynamic")
 
 if st.button("💾 Save Changes"):
-    # Re-combine other users' data with this user's updated data
     other_users = full_db[full_db['Username'] != current_user]
     pd.concat([other_users, edited_df], ignore_index=True).to_csv(EXPENSE_DB, index=False)
     st.success("Updated!")
     st.rerun()
 
-# 9. ARCHIVE FIX
+# 8. ARCHIVE FIX
 st.divider()
 st.header("📂 Archive")
 valid_years = user_data['Date'].dt.year.dropna().unique()
