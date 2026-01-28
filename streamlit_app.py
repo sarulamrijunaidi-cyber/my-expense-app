@@ -95,3 +95,25 @@ if not st.session_state.expenses_db.empty:
 else:
     st.info("No data available yet.")
     st.info("No data available yet.")
+
+# 7. MONTHLY SPENDING TREND
+st.header("Spending by Month & Year")
+
+if not st.session_state.expenses_db.empty:
+    # Clean the data to ensure numbers are valid
+    trend_df = st.session_state.expenses_db.copy()
+    trend_df['Amount'] = pd.to_numeric(trend_df['Amount'], errors='coerce').fillna(0)
+    
+    # Group by the Month_Year column you created
+    monthly_trend = trend_df.groupby('Month_Year')['Amount'].sum()
+    
+    # Sort them so they appear in order
+    st.write("Total spending for each month:")
+    st.bar_chart(monthly_trend)
+    
+    # Display a small summary table
+    trend_table = pd.DataFrame(monthly_trend).rename(columns={'Amount': 'Total Spent'})
+    trend_table['Total Spent'] = trend_table['Total Spent'].map('RM {:.2f}'.format)
+    st.table(trend_table)
+else:
+    st.info("Add more expenses from different months to see your spending trend.")
