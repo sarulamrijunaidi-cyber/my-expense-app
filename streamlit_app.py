@@ -15,7 +15,7 @@ if not st.session_state.authenticated:
     user = st.text_input("Username")
     password = st.text_input("Password", type="password")
     
-    # You can set your own passwords here
+    # Pre-set accounts for you and your husband
     if st.button("Login"):
         if (user == "sarul" and password == "sarul123") or (user == "husband" and password == "pass123"):
             st.session_state.authenticated = True
@@ -23,9 +23,9 @@ if not st.session_state.authenticated:
             st.rerun()
         else:
             st.error("Invalid username or password")
-    st.stop() # Stops the rest of the app until login
+    st.stop()
 
-# 3. PERMANENT DATABASE SETUP (With Username Column)
+# 3. PERMANENT DATABASE SETUP (With Username Support)
 DB_FILE = 'database.csv'
 if not os.path.exists(DB_FILE):
     pd.DataFrame(columns=['Username', 'Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']).to_csv(DB_FILE, index=False)
@@ -35,30 +35,53 @@ if 'expenses_db' not in st.session_state:
 
 # 4. FILTER DATA BY USER
 current_user = st.session_state.username
-full_db = st.session_state.expenses_db
-# This line ensures you only see your specific data
+full_db = st.session_state.expenses_db.copy()
+full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
+full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
+
+# This line ensures privacy: you only see YOUR data
 user_data_only = full_db[full_db['Username'] == current_user].copy()
 
-# 5. DASHBOARD CALCULATIONS
-user_data_only['Amount'] = pd.to_numeric(user_data_only['Amount'], errors='coerce').fillna(0)
-user_data_only['Date'] = pd.to_datetime(user_data_only['Date'], errors='coerce')
-
+# 5. CRITICAL CALCULATIONS (Fixes NameError)
 current_month_name = datetime.date.today().strftime("%B %Y")
 month_total = user_data_only[user_data_only['Month_Year'] == current_month_name]['Amount'].sum()
 latest_year_total = user_data_only[user_data_only['Date'].dt.year == 2026]['Amount'].sum()
 overall_total = user_data_only['Amount'].sum()
 
-# 6. SIDEBAR DISPLAY
+# 6. SIDEBAR DASHBOARD
 st.sidebar.title(f"👤 Hello, {current_user.capitalize()}")
 if st.sidebar.button("Log Out"):
     st.session_state.authenticated = False
     st.rerun()
 
 st.sidebar.divider()
+
+# Set Budget Section
+if 'monthly_budgets' not in st.session_state:
+    st.session_state.monthly_budgets = {}
+current_budget = st.session_state.monthly_budgets.get(current_month_name, 0.0)
+new_budget = st.sidebar.number_input(f"Set Budget for {current_month_name}", min_value=0.0, value=float(current_budget))
+st.session_state.monthly_budgets[current_month_name] = new_budget
+
+remaining_budget = new_budget - month_total
+
+# Large Displays
 st.sidebar.write(f"Spent in {current_month_name}")
 st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {month_total:,.2f}</h2>", unsafe_allow_html=True)
 
-# 7. ADD ITEM FORM (Saves with Username)
+st.sidebar.write("Remaining Budget")
+display_budget = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
+st.sidebar.markdown(f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>{display_budget}</h2>", unsafe_allow_html=True)
+
+st.sidebar.divider()
+st.sidebar.write("Total for 2026")
+st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {latest_year_total:,.2f}</h2>", unsafe_allow_html=True)
+
+st.sidebar.write("Overall Total")
+st.sidebar.markdown(f"<h2 style='font-size: 32px; font-weight: bold; margin-top: -15px;'>RM {overall_total:,.2f}</h2>", unsafe_allow_html=True)
+
+# 7. MAIN PAGE: ADD EXPENSE
+st.title("💰 My Financial Tracker")
 with st.expander("➕ Add New Expense"):
     with st.form("expense_form"):
         date_input = st.date_input("Date", datetime.date.today())
@@ -69,7 +92,7 @@ with st.expander("➕ Add New Expense"):
 
     if submit and item_name and amount_input > 0:
         new_entry = pd.DataFrame({
-            'Username': [current_user], # Tags the entry to the user
+            'Username': [current_user],
             'Date': [date_input], 
             'Month_Year': [date_input.strftime("%B %Y")], 
             'Item_Name': [item_name], 
@@ -81,80 +104,20 @@ with st.expander("➕ Add New Expense"):
         st.success("Saved to your account!")
         st.rerun()
 
-# 8. HISTORY (Only shows your data)
+# 8. HISTORY & ANALYTICS
 st.header(f"📝 {current_user.capitalize()}'s History")
 st.dataframe(user_data_only.sort_values('Date', ascending=False), use_container_width=True)
 
-# 9. MONTHLY SUMMARY TABLE
-
-    st.subheader("Monthly Spending Summary")
-
-    trend_table = monthly_grouped[['Month_Year', 'Amount']].copy()
-
-    trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
-
-    trend_table.columns = ['Month_Year', 'Total Spent']
-
-    st.table(trend_table)
-
-
-
-    # 10. FULL HISTORY ARCHIVE (The New Section You Requested)
-
+if not user_data_only.empty:
     st.divider()
-
-    st.header("📂 Full Expense Archive")
-
-    
-
-    # Selection for Year and Month
-
-    all_years = sorted(df_sidebar['Date'].dt.year.unique(), reverse=True)
-
-    selected_year = st.selectbox("Select Year to View", all_years)
-
-    
-
-    # Filter for the selected year
-
-    year_data = st.session_state.expenses_db.copy()
-
-    year_data['Date'] = pd.to_datetime(year_data['Date'])
-
-    filtered_year_df = year_data[year_data['Date'].dt.year == selected_year]
-
-    
-
-    # Selection for Month based on that year
-
-    available_months = ["All"] + list(filtered_year_df['Month_Year'].unique())
-
-    selected_month = st.selectbox(f"Select Month in {selected_year}", available_months)
-
-    
-
-    final_archive_df = filtered_year_df
-
-    if selected_month != "All":
-
-        final_archive_df = filtered_year_df[filtered_year_df['Month_Year'] == selected_month]
-
-    
-
-    # Display the final filtered archive
-
-    st.dataframe(
-
-        final_archive_df.sort_values('Date', ascending=False), 
-
-        use_container_width=True,
-
-        column_config={"Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")}
-
-    )
-
-
-
-else:
-
-    st.info("No data available yet.")
+    st.header("📈 Data Analytics")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("By Category")
+        st.bar_chart(user_data_only.groupby('Category')['Amount'].sum(), color="#FF4B4B")
+    with c2:
+        st.subheader("Monthly Spending Summary") # Fixed Indentation here
+        summary = user_data_only.copy()
+        summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
+        monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
+        st.table(monthly_grouped[['Month_Year', 'Amount']])
