@@ -3,8 +3,8 @@ import pandas as pd
 import datetime
 
 # 1. APP CONFIGURATION
-st.set_page_config(page_title="Sarul's Expense App", layout="wide")
-st.title("📊 Sarul's Expense Tracker")
+st.set_page_config(page_title="Monthly's Expense App", layout="wide")
+st.title("📊 Monthly's Expense Tracker")
 
 # 2. DATABASE SETUP
 if 'expenses_db' not in st.session_state:
