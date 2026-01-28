@@ -135,22 +135,28 @@ if not user_data.empty:
     
     with c1:
         st.subheader("By Category")
-        # Uses the red color from your previous design
+        # Uses the red color from your design
         st.bar_chart(user_data.groupby('Category')['Amount'].sum(), color="#FF4B4B")
         
     with c2:
         st.subheader("Monthly Spending Summary")
+        # --- FIX: Define monthly_data before using it in the chart ---
         summary = user_data.copy()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
-        monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
+        # This defines 'monthly_data' for use in the bar chart below
+        monthly_data = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date')
         
-        # Formatting the summary table
-        trend_table = monthly_grouped[['Month_Year', 'Amount']].copy()
-        trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format) # Fixes 35.0000 to RM 35.00
+        # Formatting the summary table with RM and 2 decimals
+        trend_table = monthly_data[['Month_Year', 'Amount']].copy()
+        trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
         st.table(trend_table)
-        
-        # Displays the chart with a different color (Blue)
-        st.bar_chart(data=monthly_data, x='Month_Year', y='Amount', color="#0072B2")
+
+    # --- BAR CHART BY MONTH (Displays with Blue color) ---
+    st.subheader("Monthly Spend Trend")
+    st.bar_chart(data=monthly_data, x='Month_Year', y='Amount', color="#0072B2")
+
+else:
+    st.info("No data available yet.")
 
     # 8.1 Monthly Spending Table
     st.subheader("Monthly Spending Summary")
