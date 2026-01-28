@@ -64,22 +64,34 @@ if month_filter != "All":
 
 st.dataframe(filtered_df, use_container_width=True)
 
-# 6. ANALYTICS - FINAL SAFETY FIX
+# 6. ANALYTICS - PERCENTAGE BAR CHART STYLE
 if not st.session_state.expenses_db.empty:
-    st.header("Expenses Analytics")
+    st.header("Spending Analytics & Percentages")
     
-    # Create a clean copy and force numbers one last time
+    # Clean the data to ensure numbers are valid
     chart_df = filtered_df.copy()
     chart_df['Amount'] = pd.to_numeric(chart_df['Amount'], errors='coerce').fillna(0)
     
-    # Only use items where Amount is more than 0 to prevent the chart crash
-    chart_data = chart_df[chart_df['Amount'] > 0].groupby('Category')['Amount'].sum()
+    # Group by category and calculate total
+    category_totals = chart_df.groupby('Category')['Amount'].sum()
+    grand_total = category_totals.sum()
     
-    if not chart_data.empty:
-        st.write(f"Spending Breakdown for {month_filter}")
-        # This will now display the pie chart correctly
-        st.pie_chart(chart_data) 
+    if grand_total > 0:
+        # Calculate Percentage for your report
+        percentages = (category_totals / grand_total) * 100
+        
+        # Display as a table first so you see the exact %
+        percent_df = pd.DataFrame({
+            'Total RM': category_totals.map('RM {:.2f}'.format),
+            'Percentage (%)': percentages.map('{:.1f}%'.format)
+        })
+        st.write(f"Summary for {month_filter}:")
+        st.table(percent_df)
+        
+        # Show the Bar Chart
+        st.bar_chart(category_totals)
     else:
-        st.info("The chart will appear once you add an expense with an amount.")
+        st.info("Add an expense with an amount to see the breakdown.")
 else:
+    st.info("No data available yet.")
     st.info("No data available yet.")
