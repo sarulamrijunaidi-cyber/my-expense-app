@@ -14,9 +14,10 @@ if 'expenses_db' not in st.session_state:
     )
 
 # 3. SIDEBAR - DASHBOARD TOTAL (Like Page 2 of your sketch)
-st.sidebar.header("Dashboard")
+# Force the Amount column to be numeric so the math works
+st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce')
 total_spent = st.session_state.expenses_db['Amount'].sum()
-st.sidebar.metric("Total Expenses", f"RM {total_spent:.2f}") # Shows RM currency
+st.sidebar.metric("Total Expenses", f"RM {total_spent:.2f}")
 
 # 4. ADD ITEM FORM (Matching your Page 3 sketch)
 with st.expander("➕ Add New Expense", expanded=True):
@@ -65,11 +66,12 @@ st.dataframe(filtered_df, use_container_width=True)
 # 6. ANALYTICS (Matching your Page 5 sketch)
 if not st.session_state.expenses_db.empty:
     st.header("Expenses Analytics")
-    # Grouping data for the Pie Chart
-    chart_data = filtered_df.groupby('Category')['Amount'].sum()
+    # Only use data where Amount is a valid number
+    chart_df = filtered_df.dropna(subset=['Amount'])
+    chart_data = chart_df.groupby('Category')['Amount'].sum()
     
-    # Displaying the Pie Chart with percentages
-    st.write(f"Spending Breakdown for {month_filter}")
-    st.pie_chart(chart_data)
+    if not chart_data.empty:
+        st.write(f"Spending Breakdown for {month_filter}")
+        st.pie_chart(chart_data)
 else:
     st.info("No data available yet. Please add an expense to see analytics.") 
