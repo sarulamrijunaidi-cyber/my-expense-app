@@ -6,11 +6,22 @@ import datetime
 st.set_page_config(page_title="Monthly Expense App", layout="wide")
 st.title("📊 My Expense Tracker")
 
-# 2. DATABASE SETUP
+# 2. PERMANENT DATABASE SETUP
+import os
+
+# Define the filename
+DB_FILE = 'database.csv'
+
+# Check if the file exists; if not, create an empty one with columns
+if not os.path.exists(DB_FILE):
+    pd.DataFrame(columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']).to_csv(DB_FILE, index=False)
+
+# Always load the data from the CSV file into the app memory
 if 'expenses_db' not in st.session_state:
-    st.session_state.expenses_db = pd.DataFrame(
-        columns=['Date', 'Month_Year', 'Item_Name', 'Amount', 'Category']
-    )
+    st.session_state.expenses_db = pd.read_csv(DB_FILE)
+
+# Force numeric for math
+st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
 # 2.1 BUDGET SETUP
 if 'monthly_budgets' not in st.session_state:
