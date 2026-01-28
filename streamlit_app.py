@@ -22,11 +22,13 @@ if 'monthly_budgets' not in st.session_state:
 # Force numeric for math
 st.session_state.expenses_db['Amount'] = pd.to_numeric(st.session_state.expenses_db['Amount'], errors='coerce').fillna(0)
 
-# 3. MAIN PAGE DASHBOARD & REMINDERS
+# 3. MAIN DASHBOARD & PAYMENT ALERTS
+st.title("💰 My Financial Tracker")
+
 st.header("📍 Dashboard Summary")
 
-# --- NEW: CRUCIAL PAYMENT REMINDERS ---
-# You can set the due day for each category here (e.g., day 1 or day 5)
+# --- PAYMENT ALERTS SECTION ---
+st.subheader("⚠️ Payment Alerts")
 due_dates = {
     "House Rent": 1, 
     "Car Loan": 5, 
@@ -34,31 +36,24 @@ due_dates = {
     "Personal Loan": 7, 
     "Utilities Bill": 10
 }
-
-today = datetime.date.today()
-current_day = today.day
-
-st.subheader("⚠️ Payment Alerts")
+today_day = datetime.date.today().day
 alerts_found = False
 
 for category, due_day in due_dates.items():
-    # Show alert if the due date is within the next 7 days
-    if due_day >= current_day and (due_day - current_day) <= 7:
-        st.warning(f"Reminder: **{category}** is due on the {due_day}st/th! Please prepare payment.")
+    if due_day >= today_day and (due_day - today_day) <= 7:
+        st.warning(f"Reminder: **{category}** is due on the {due_day}st/th!")
         alerts_found = True
-    elif current_day > due_day:
-        # Optional: Alert if the day has passed but no payment recorded yet
+    elif today_day > due_day:
         st.error(f"Alert: **{category}** due date ({due_day}st/th) has passed!")
         alerts_found = True
 
 if not alerts_found:
-    st.success("All clear! No urgent payments due this week.")
+    st.success("All clear! No urgent payments due.")
 
 st.divider()
 
-# Existing Metric Boxes
+# --- METRIC BOXES (Now works correctly) ---
 col1, col2, col3 = st.columns(3)
-# (Keep your existing calculation logic here for month_total, year_total, etc.)
 with col1:
     st.metric(f"Spent in {current_month_name}", f"RM {month_total:,.2f}")
 with col2:
@@ -66,23 +61,17 @@ with col2:
 with col3:
     st.metric("Overall Total", f"RM {grand_total:,.2f}")
 
-# ALWAYS RED REMAINING BUDGET WITH NEGATIVE SUPPORT
+# 4. SIDEBAR BUDGET
+st.sidebar.header("⚙️ Settings")
+current_budget = st.session_state.monthly_budgets.get(current_month_name, 0.0)
+new_budget = st.sidebar.number_input(f"Set Budget for {current_month_name}", min_value=0.0, value=float(current_budget))
+st.session_state.monthly_budgets[current_month_name] = new_budget
+
+remaining_budget = new_budget - month_total
 st.sidebar.write("Remaining Budget")
-if remaining_budget < 0:
-    display_budget = f"-RM {abs(remaining_budget):,.2f}"
-else:
-    display_budget = f"RM {remaining_budget:,.2f}"
-
-st.sidebar.markdown(
-    f"<h2 style='color: #FF4B4B; font-size: 32px; font-weight: bold; margin-top: -15px;'>{display_budget}</h2>", 
-    unsafe_allow_html=True
-)
-
-st.sidebar.divider()
-latest_year_total = df_sidebar[df_sidebar['Date'].dt.year == 2026].Amount.sum()
-overall_total = df_sidebar.Amount.sum()
-st.sidebar.metric("Total for 2026", f"RM {latest_year_total:,.2f}")
-st.sidebar.metric("Overall Total", f"RM {overall_total:,.2f}")
+color = "#FF4B4B" # Red
+display_val = f"-RM {abs(remaining_budget):,.2f}" if remaining_budget < 0 else f"RM {remaining_budget:,.2f}"
+st.sidebar.markdown(f"<h2 style='color: {color}; font-weight: bold;'>{display_val}</h2>", unsafe_allow_html=True)
 
 # 4. ADD ITEM FORM
 with st.expander("➕ Add New Expense"):
