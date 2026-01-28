@@ -57,33 +57,38 @@ if not st.session_state.authenticated:
                 st.success("Account created! Please login.")
     st.stop()
 
-# 4. DASHBOARD CALCULATIONS (Fixed for Year Total)
+# 4. DASHBOARD CALCULATIONS (Enhanced Year Filtering)
 current_user = st.session_state.username
 
-# ALWAYS reload fresh data from the file to reflect deletions
-full_db = pd.read_csv(EXPENSE_DB) 
+# Load data and force Date conversion
+full_db = pd.read_csv(EXPENSE_DB)
 
-# Apply user filtering and numeric conversion
+# Ensure 'Amount' is numeric
 full_db['Amount'] = pd.to_numeric(full_db['Amount'], errors='coerce').fillna(0)
 
-# Convert 'Date' to datetime objects and handle errors
+# FORCE convert 'Date' to datetime. If it's already a date object, it handles it.
+# If there are empty dates, it turns them into 'NaT' (Not a Time)
 full_db['Date'] = pd.to_datetime(full_db['Date'], errors='coerce')
 
-# Filter data for the logged-in user
+# Filter for the current user
 user_data = full_db[full_db['Username'] == current_user].copy()
 
 # Recalculate Totals
 current_month = datetime.date.today().strftime("%B %Y")
-current_year = datetime.date.today().year
+
+# We use 2026 specifically as requested
+target_year = 2026
 
 # Filter for the current month
 month_spent = user_data[user_data['Month_Year'] == current_month]['Amount'].sum()
 
-# Fix: Filter for the current year using the .dt accessor
-year_total = user_data[user_data['Date'].dt.year == current_year]['Amount'].sum()
+# Fix: Filter using the year from the converted Date column
+# We remove rows with missing dates (NaT) to avoid errors
+year_total = user_data[user_data['Date'].dt.year == target_year]['Amount'].sum()
 
 # Calculate overall total
 overall_total = user_data['Amount'].sum()
+
 # 5. SIDEBAR DISPLAY
 st.sidebar.title(f"👤 {current_user}")
 if st.sidebar.button("Log Out"):
