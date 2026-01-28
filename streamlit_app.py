@@ -113,19 +113,27 @@ with st.expander("➕ Add New Expense"):
             st.success("Saved!")
             st.rerun()
 
-# 7. RECENT HISTORY (Updated with RM and 2 Decimals)
+# 7. RECENT HISTORY (Now Editable)
 st.header(f"📝 Recent History ({current_month})")
-st.dataframe(
-    user_data[user_data['Month_Year'] == current_month].sort_values('Date', ascending=False), 
+
+# Use data_editor instead of dataframe to allow fixing typos
+edited_df = st.data_editor(
+    user_data[user_data['Month_Year'] == current_month].sort_values('Date', ascending=False),
     use_container_width=True,
+    key="history_editor",
     column_config={
-        "Amount": st.column_config.NumberColumn(
-            "Amount",
-            help="Total amount in RM",
-            format="RM %.2f",  # Adds RM and ensures 2 decimal places
-        )
+        "Amount": st.column_config.NumberColumn("Amount", format="RM %.2f")
     }
 )
+
+# Save changes back to the permanent CSV file if you edit a cell
+if st.button("💾 Save Changes to History"):
+    # Combine the edited user data with the rest of the database
+    other_users_data = full_db[full_db['Username'] != current_user]
+    updated_full_db = pd.concat([other_users_data, edited_df], ignore_index=True)
+    updated_full_db.to_csv(EXPENSE_DB, index=False)
+    st.success("History updated!")
+    st.rerun()
 
 # 8. DATA ANALYTICS
 if not user_data.empty:
