@@ -122,15 +122,26 @@ if not user_data.empty:
     st.divider()
     st.header("📈 Data Analytics")
     c1, c2 = st.columns(2)
+    
     with c1:
         st.subheader("By Category")
+        # Uses the red color from your previous design
         st.bar_chart(user_data.groupby('Category')['Amount'].sum(), color="#FF4B4B")
+        
     with c2:
-        st.subheader("Monthly Spending Summary")
+        st.subheader("Monthly Spend")
+        # Prepares data by Month and Year for the chart
         summary = user_data.copy()
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
-        monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
-        st.table(monthly_grouped[['Month_Year', 'Amount']])
+        monthly_data = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index()
+        monthly_data = monthly_data.sort_values('Sort_Date')
+        
+        # Displays the chart with a different color (Blue)
+        st.bar_chart(data=monthly_data, x='Month_Year', y='Amount', color="#0072B2")
+
+    # 8.1 Monthly Spending Table
+    st.subheader("Monthly Spending Summary")
+    st.table(monthly_data[['Month_Year', 'Amount']])
 
     # 9. NEW: FULL HISTORY ARCHIVE
     st.divider()
