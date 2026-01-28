@@ -95,11 +95,6 @@ if not st.session_state.expenses_db.empty:
         summary['Sort_Date'] = pd.to_datetime(summary['Month_Year'], format='%B %Y')
         monthly_grouped = summary.groupby(['Month_Year', 'Sort_Date'])['Amount'].sum().reset_index().sort_values('Sort_Date', ascending=False)
         st.bar_chart(data=monthly_grouped, x='Month_Year', y='Amount', color="#0072B2")
-    
-    st.subheader("Monthly Spending Summary")
-    trend_table = monthly_grouped[['Month_Year', 'Amount']].copy()
-    trend_table['Amount'] = trend_table['Amount'].map('RM {:.2f}'.format)
-    st.table(trend_table)
 
 # 7. MONTHLY SUMMARY TABLE
     st.subheader("Monthly Spending Summary")
